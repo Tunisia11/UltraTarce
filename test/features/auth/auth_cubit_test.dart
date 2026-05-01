@@ -1,0 +1,64 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ultra_trace/features/auth/application/auth_cubit.dart';
+import 'package:ultra_trace/features/auth/application/auth_state.dart';
+import 'package:ultra_trace/features/auth/data/auth_models.dart';
+
+import 'fake_auth_repositories.dart';
+
+void main() {
+  test('initialize without session emits unauthenticated', () async {
+    final repo = FakeAuthRepository();
+    final cubit = AuthCubit(repo);
+
+    await cubit.initialize();
+
+    expect(cubit.state, isA<AuthUnauthenticated>());
+    await cubit.close();
+    await repo.close();
+  });
+
+  test('login success moves to authenticated state', () async {
+    final repo = FakeAuthRepository();
+    final cubit = AuthCubit(repo);
+
+    final user = await cubit.loginWithEmailPassword(
+      email: 'user@example.com',
+      password: 'secret',
+    );
+
+    expect(user?.email, 'user@example.com');
+    expect(cubit.state, isA<AuthAuthenticated>());
+    await cubit.close();
+    await repo.close();
+  });
+
+  test('login failure gives failure state', () async {
+    final repo = FakeAuthRepository(
+      loginFailure: 'Email ou mot de passe incorrect.',
+    );
+    final cubit = AuthCubit(repo);
+
+    await cubit.loginWithEmailPassword(
+      email: 'user@example.com',
+      password: 'bad',
+    );
+
+    expect(cubit.state, isA<AuthFailure>());
+    await cubit.close();
+    await repo.close();
+  });
+
+  test('logout clears auth state', () async {
+    final repo = FakeAuthRepository(
+      initialUser: const AppUser(id: 'user-1', email: 'user@example.com'),
+    );
+    final cubit = AuthCubit(repo);
+
+    await cubit.logout();
+
+    expect(repo.loggedOut, isTrue);
+    expect(cubit.state, isA<AuthUnauthenticated>());
+    await cubit.close();
+    await repo.close();
+  });
+}
