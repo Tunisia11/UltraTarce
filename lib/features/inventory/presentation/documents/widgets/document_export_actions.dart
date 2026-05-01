@@ -22,7 +22,7 @@ extension _InventoryDocumentExportActions on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: Text('Paiement ${document.number}'),
           content: SizedBox(
             width: 520,
@@ -139,7 +139,7 @@ extension _InventoryDocumentExportActions on _InventoryHomePageState {
                   note: note.text.trim(),
                 );
                 _updateState(() {
-                  context.read<DocumentsCubit>().addPayment(
+                  _documentsCubit.addPayment(
                     document: document,
                     documents: _documents,
                     payment: payment,

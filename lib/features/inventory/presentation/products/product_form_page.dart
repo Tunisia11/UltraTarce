@@ -37,7 +37,7 @@ extension _InventoryProductFormPage on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: Text(isNewProduct ? 'Ajouter un produit' : 'Modifier produit'),
           content: SizedBox(
             width: isNewProduct ? 680 : 760,
@@ -338,7 +338,7 @@ extension _InventoryProductFormPage on _InventoryHomePageState {
                   description: description.text.trim(),
                 );
                 try {
-                  final productsCubit = context.read<ProductsCubit>();
+                  final productsCubit = _productsCubit;
                   if (isNewProduct) {
                     productsCubit.createProduct(
                       updated,
@@ -374,7 +374,7 @@ extension _InventoryProductFormPage on _InventoryHomePageState {
 
   void _deleteProduct(Product product) {
     _updateState(() {
-      context.read<ProductsCubit>().deleteOrArchiveProduct(product);
+      _productsCubit.deleteOrArchiveProduct(product);
       _applyRepositoryState();
     });
   }

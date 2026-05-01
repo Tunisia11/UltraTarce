@@ -291,6 +291,21 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
                       : _triggerManualPushSync,
                   icon: const Icon(Icons.sync, size: 18),
                 ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.arrow_drop_down, size: 18),
+                  tooltip: 'Options de synchronisation',
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'repair',
+                      child: Text(SyncPilotMessages.repairSyncActionLabel),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'repair') {
+                      _triggerRepairSync();
+                    }
+                  },
+                ),
               ],
             );
           },

@@ -162,6 +162,14 @@ class AppRepository {
     return save(snapshot, status: status);
   }
 
+  Future<void> repairSync() async {
+    final syncOutboxService = _syncOutboxService;
+    final currentSnapshot = _snapshot;
+    if (syncOutboxService != null && currentSnapshot != null) {
+      await syncOutboxService.repairSync(currentSnapshot);
+    }
+  }
+
   Future<void> flushPendingWrites() async {
     await _pendingDriftWrite;
   }

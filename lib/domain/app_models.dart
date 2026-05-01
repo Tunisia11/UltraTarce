@@ -694,6 +694,7 @@ class StockMovement {
     required this.productId,
     required this.productName,
     required this.documentNumber,
+    this.sourceDocumentId,
     required this.direction,
     required this.quantity,
     required this.warehouseId,
@@ -704,6 +705,7 @@ class StockMovement {
   final String productId;
   final String productName;
   final String documentNumber;
+  final String? sourceDocumentId;
   final StockDirection direction;
   final int quantity;
   final String warehouseId;
@@ -714,6 +716,7 @@ class StockMovement {
     'productId': productId,
     'productName': productName,
     'documentNumber': documentNumber,
+    'sourceDocumentId': sourceDocumentId,
     'direction': direction.name,
     'quantity': quantity,
     'warehouseId': warehouseId,
@@ -726,6 +729,7 @@ class StockMovement {
       productId: json['productId'] as String? ?? '',
       productName: json['productName'] as String? ?? '',
       documentNumber: json['documentNumber'] as String? ?? '',
+      sourceDocumentId: json['sourceDocumentId'] as String?,
       direction: enumFromName(
         StockDirection.values,
         json['direction'],

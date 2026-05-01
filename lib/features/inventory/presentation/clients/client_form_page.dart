@@ -28,7 +28,7 @@ extension _InventoryClientFormPage on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: Text(
             partner == null
                 ? (type == PartnerType.client
@@ -310,14 +310,14 @@ extension _InventoryClientFormPage on _InventoryHomePageState {
                 );
                 _updateState(() {
                   if (updated.type == PartnerType.client) {
-                    final cubit = context.read<ClientsCubit>();
+                    final cubit = _clientsCubit;
                     if (partner == null) {
                       cubit.createClient(updated);
                     } else {
                       cubit.updateClient(updated);
                     }
                   } else {
-                    final cubit = context.read<SuppliersCubit>();
+                    final cubit = _suppliersCubit;
                     if (partner == null) {
                       cubit.createSupplier(updated);
                     } else {
@@ -341,9 +341,9 @@ extension _InventoryClientFormPage on _InventoryHomePageState {
   void _deletePartner(Partner partner) {
     _updateState(() {
       if (partner.type == PartnerType.client) {
-        context.read<ClientsCubit>().deleteOrArchiveClient(partner);
+        _clientsCubit.deleteOrArchiveClient(partner);
       } else {
-        context.read<SuppliersCubit>().deleteOrArchiveSupplier(partner);
+        _suppliersCubit.deleteOrArchiveSupplier(partner);
       }
       _applyRepositoryState();
     });

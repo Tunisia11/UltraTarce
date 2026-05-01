@@ -115,6 +115,18 @@ class SyncOutboxService {
         payloadOf: (event) => event.toJson(),
       );
       await _enqueueSequenceSetting(previous.sequences, next.sequences);
+
+      if (previous.movements.length != next.movements.length) {
+        // Enqueue 'main' warehouse (and all other existing warehouses) to ensure dependencies
+        for (final warehouse in next.warehouses) {
+          await enqueueMutation(
+            entityType: 'warehouses',
+            entityId: warehouse.id,
+            operation: 'upsert',
+            payload: warehouse.toJson(),
+          );
+        }
+      }
     });
   }
 
@@ -348,5 +360,56 @@ class SyncOutboxService {
       movement.quantity,
       movement.serialNumbers.join(','),
     ].join(':');
+  }
+
+  Future<void> repairSync(AppSnapshot snapshot) async {
+    await _repository.transaction(() async {
+      await enqueueMutation(
+        entityType: 'companies',
+        entityId: _tenantContext.selectedTenantId,
+        operation: 'upsert',
+        payload: snapshot.company.toJson(),
+      );
+      for (final warehouse in snapshot.warehouses) {
+        await enqueueMutation(
+          entityType: 'warehouses',
+          entityId: warehouse.id,
+          operation: 'upsert',
+          payload: warehouse.toJson(),
+        );
+      }
+      for (final category in snapshot.categories) {
+        await enqueueMutation(
+          entityType: 'categories',
+          entityId: category.id,
+          operation: 'upsert',
+          payload: category.toJson(),
+        );
+      }
+      for (final product in snapshot.products) {
+        await enqueueMutation(
+          entityType: 'products',
+          entityId: product.id,
+          operation: 'upsert',
+          payload: product.toJson(),
+        );
+      }
+      for (final partner in snapshot.partners) {
+        await enqueueMutation(
+          entityType: 'partners',
+          entityId: partner.id,
+          operation: 'upsert',
+          payload: partner.toJson(),
+        );
+      }
+      for (final document in snapshot.documents) {
+        await enqueueMutation(
+          entityType: 'documents',
+          entityId: document.id,
+          operation: 'upsert',
+          payload: document.toJson(),
+        );
+      }
+    });
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -689,9 +690,6 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   }
 
   Future<void> _triggerManualPushSync() async {
-    final pending = await _syncOutboxRepository.getSummary(
-      tenantId: _tenantContext.selectedTenantId,
-    );
     final unavailableMessage = SyncPilotMessages.unavailableMessage(
       authBypassEnabled: _appConfig.authBypassEnabled,
       devBypassTenantActive: _tenantContext.isDevBypassTenantActive,
@@ -701,25 +699,62 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
       _showMessage(unavailableMessage, isError: true);
       return;
     }
-    final result = pending.failedCount > 0
-        ? await _syncPushService.retryFailed()
-        : await _syncPushService.pushPending();
+    final pendingReport = await _syncPushService.pushPending(limit: 100);
+    final retryReport = await _syncPushService.retryFailed(limit: 100);
+
     await _syncStatusCubit.refresh();
     if (!mounted) return;
-    final error = result.errorOrNull;
-    if (error != null) {
-      _showMessage(SyncPilotMessages.errorMessage(error.code), isError: true);
-      return;
-    }
-    final report = result.valueOrNull!;
-    if (report.failed > 0) {
+
+    final hasFailure =
+        pendingReport.errorOrNull != null ||
+        retryReport.errorOrNull != null ||
+        pendingReport.valueOrNull?.hasFailures == true ||
+        retryReport.valueOrNull?.hasFailures == true;
+
+    if (hasFailure) {
+      final lastError =
+          pendingReport.errorOrNull ??
+          retryReport.errorOrNull ??
+          pendingReport.valueOrNull?.lastError ??
+          retryReport.valueOrNull?.lastError;
+
       _showMessage(
-        SyncPilotMessages.errorMessage(report.lastError?.code ?? ''),
+        'Synchronisation échouée: ${lastError?.message ?? "Erreur inconnue"}. Les données locales sont conservées.',
         isError: true,
       );
+
+      if (kDebugMode) {
+        final failedRows = await _syncOutboxRepository.listFailed(
+          tenantId: _tenantContext.selectedTenantId,
+        );
+        for (final row in failedRows) {
+          debugPrint(
+            '[sync_debug] failed row: ${row.entityType}/${row.entityId} (op: ${row.operation}) error: ${row.lastError}',
+          );
+        }
+      }
       return;
     }
-    _showMessage(SyncPilotMessages.successMessage(synced: report.synced));
+
+    _showMessage('Synchronisation terminée.');
+  }
+
+  Future<void> _triggerRepairSync() async {
+    final unavailableMessage = SyncPilotMessages.unavailableMessage(
+      authBypassEnabled: _appConfig.authBypassEnabled,
+      devBypassTenantActive: _tenantContext.isDevBypassTenantActive,
+      hasSupabaseConfig: _appConfig.hasSupabaseConfig,
+    );
+    if (unavailableMessage != null) {
+      _showMessage(unavailableMessage, isError: true);
+      return;
+    }
+
+    await _appRepository.repairSync();
+    _showMessage(SyncPilotMessages.repairSyncSuccessMessage);
+
+    // Attempt push immediately after repair
+    await _triggerManualPushSync();
   }
 
   void _goToSales({DocumentType? type}) {

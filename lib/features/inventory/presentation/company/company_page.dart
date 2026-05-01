@@ -152,7 +152,7 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
       timbreFiscalAmount: timbre,
     );
     _updateState(() {
-      context.read<CompanyCubit>().updateCompanyProfile(updated);
+      _companyCubit.updateCompanyProfile(updated);
       _applyRepositoryState();
     });
 
@@ -161,7 +161,7 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
 
   void _setDefaultTimbreFiscal(bool enabled) {
     _updateState(() {
-      context.read<CompanyCubit>().updateFiscalSettings(
+      _companyCubit.updateFiscalSettings(
         timbreFiscalEnabled: enabled,
         timbreFiscalAmount: _company.timbreFiscalAmount,
       );

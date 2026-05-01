@@ -11,7 +11,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: Text(warehouse == null ? 'Nouveau dépôt' : 'Modifier dépôt'),
           content: SizedBox(
             width: 520,
@@ -51,7 +51,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
                   active: active,
                 );
                 _updateState(() {
-                  final cubit = context.read<WarehouseCubit>();
+                  final cubit = _warehouseCubit;
                   if (warehouse == null) {
                     cubit.createWarehouse(updated);
                   } else {
@@ -70,9 +70,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
   }
 
   void _deleteWarehouse(Warehouse warehouse) {
-    final result = context.read<WarehouseCubit>().deleteOrArchiveWarehouse(
-      warehouse,
-    );
+    final result = _warehouseCubit.deleteOrArchiveWarehouse(warehouse);
     _updateState(() => _applyRepositoryState());
     if (result.archived) {
       _showMessage('Dépôt utilisé: il a été désactivé.');
@@ -85,7 +83,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: Text(
             category == null ? 'Nouvelle catégorie' : 'Modifier catégorie',
           ),
@@ -116,7 +114,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
                   _showMessage('Nom obligatoire.', isError: true);
                   return;
                 }
-                final categoryCubit = context.read<CategoryCubit>();
+                final categoryCubit = _categoryCubit;
                 final duplicate = categoryCubit.hasDuplicateName(
                   cleanName,
                   exceptId: category?.id,
@@ -153,9 +151,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
   }
 
   void _deleteCategory(Category category) {
-    final result = context.read<CategoryCubit>().deleteOrArchiveCategory(
-      category,
-    );
+    final result = _categoryCubit.deleteOrArchiveCategory(category);
     _updateState(() => _applyRepositoryState());
     if (result.archived) {
       _showMessage('Catégorie utilisée: elle a été désactivée.');
@@ -561,8 +557,8 @@ extension _InventoryWorkflows on _InventoryHomePageState {
         _editingDocumentId ?? DateTime.now().microsecondsSinceEpoch.toString();
     final documentNumber = editingIndex >= 0
         ? _documents[editingIndex].number
-        : context.read<SalesCubit>().nextNumber(_newDocumentType);
-    context.read<SalesCubit>().saveSaleDocument(
+        : _salesCubit.nextNumber(_newDocumentType);
+    _salesCubit.saveSaleDocument(
       id: documentId,
       type: _newDocumentType,
       number: documentNumber,
@@ -669,7 +665,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: Text('Séries - ${product.sku}'),
           content: SizedBox(
             width: 420,
@@ -808,7 +804,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
         return false;
       }
       if (!document.stockApplied) {
-        stockMutation = context.read<StockCubit>().decreaseStockForDocument(
+        stockMutation = _stockCubit.decreaseStockForDocument(
           document: document,
           date: DateTime.now(),
         );
@@ -827,7 +823,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
         return false;
       }
       if (!document.stockApplied) {
-        stockMutation = context.read<StockCubit>().increaseStockForDocument(
+        stockMutation = _stockCubit.increaseStockForDocument(
           document: document,
           date: DateTime.now(),
           serialGenerator: _generatedSerial,
@@ -837,7 +833,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
       }
     }
 
-    context.read<DocumentsCubit>().validateDocument(
+    _documentsCubit.validateDocument(
       document: document,
       lines: lines,
       stockApplied: stockApplied,
@@ -873,8 +869,8 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     }
 
     final documentId = DateTime.now().microsecondsSinceEpoch.toString();
-    final number = context.read<DocumentsCubit>().nextNumber(DocumentType.bl);
-    context.read<DocumentsCubit>().convertDevisToBl(
+    final number = _documentsCubit.nextNumber(DocumentType.bl);
+    _documentsCubit.convertDevisToBl(
       source: source,
       id: documentId,
       number: number,
@@ -935,10 +931,8 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     }
 
     final invoiceId = DateTime.now().microsecondsSinceEpoch.toString();
-    final invoiceNumber = context.read<DocumentsCubit>().nextNumber(
-      DocumentType.facture,
-    );
-    context.read<DocumentsCubit>().convertBlToFacture(
+    final invoiceNumber = _documentsCubit.nextNumber(DocumentType.facture);
+    _documentsCubit.convertBlToFacture(
       source: currentSource,
       id: invoiceId,
       number: invoiceNumber,
@@ -969,7 +963,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
       if (reversal == null) return;
     }
 
-    context.read<DocumentsCubit>().cancelDocument(document);
+    _documentsCubit.cancelDocument(document);
     _updateState(() {
       _applyRepositoryState(selectedDocumentId: document.id);
     });
@@ -977,7 +971,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
   }
 
   StockMutationResult? _reverseStock(BusinessDocument document) {
-    final outcome = context.read<StockCubit>().reverseDocumentStock(
+    final outcome = _stockCubit.reverseDocumentStock(
       document: document,
       date: DateTime.now(),
       warehouseNameById: (warehouseId) => _warehouseById(warehouseId).name,
@@ -1003,7 +997,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
         ? DocumentType.stockEntry
         : DocumentType.supplierOrder;
     final documentId = DateTime.now().microsecondsSinceEpoch.toString();
-    final documentsCubit = context.read<DocumentsCubit>();
+    final documentsCubit = _documentsCubit;
     final document = documentsCubit.buildSupplierPurchaseDocument(
       id: documentId,
       type: type,
@@ -1028,7 +1022,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
           : 'Commande fournisseur sans mouvement de stock.',
     );
 
-    context.read<DocumentsCubit>().createSupplierDocument(
+    _documentsCubit.createSupplierDocument(
       document: document,
       receiveNow: receiveNow,
     );
@@ -1066,10 +1060,8 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     }
 
     final entryId = DateTime.now().microsecondsSinceEpoch.toString();
-    final entryNumber = context.read<DocumentsCubit>().nextNumber(
-      DocumentType.stockEntry,
-    );
-    context.read<DocumentsCubit>().convertSupplierOrderToStockEntry(
+    final entryNumber = _documentsCubit.nextNumber(DocumentType.stockEntry);
+    _documentsCubit.convertSupplierOrderToStockEntry(
       source: source,
       id: entryId,
       number: entryNumber,
@@ -1087,7 +1079,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
 
   Future<void> _createCreditNoteFromInvoice(BusinessDocument invoice) async {
     if (invoice.type != DocumentType.facture) return;
-    final documentsCubit = context.read<DocumentsCubit>();
+    final documentsCubit = _documentsCubit;
     final blockReason = ReturnService.creditNoteBlockReason(
       _documents,
       invoice,

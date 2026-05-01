@@ -156,6 +156,17 @@ class SyncOutboxRepository {
     );
   }
 
+  Future<List<SyncOutboxMutation>> listFailed({
+    required String tenantId,
+    int limit = 20,
+  }) async {
+    return listByStatuses(
+      tenantId: tenantId,
+      statuses: const ['failed'],
+      limit: limit,
+    );
+  }
+
   Future<List<SyncOutboxMutation>> listByStatuses({
     required String tenantId,
     required List<String> statuses,

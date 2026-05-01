@@ -172,6 +172,82 @@ void main() {
     expect(result.isFailure, isTrue);
     expect(result.errorOrNull?.code, RemoteErrorCodes.authMissing);
   });
+
+  test('pushes entries in dependency priority order', () async {
+    final harness = _createHarness();
+    addTearDown(harness.close);
+
+    harness.remote.existingRows.add(
+      '${RemoteTables.warehouses}|$_tenantId|${RemoteSyncMapper.remoteIdFor(_tenantId, 'warehouses', 'w1')}',
+    );
+
+    // Enqueue in reverse priority order
+    await harness.outboxService.enqueueMutation(
+      entityType: 'stock_movements',
+      entityId: 'sm1',
+      operation: 'insert',
+      payload: {
+        'id': 'sm1',
+        'productId': 'p1',
+        'warehouseId': 'w1',
+        'sourceDocumentId': 'doc1',
+      },
+    );
+    await harness.outboxService.enqueueMutation(
+      entityType: 'document_lines',
+      entityId: 'dl1',
+      operation: 'insert',
+      payload: {'id': 'dl1', 'documentId': 'doc1', 'productId': 'p1'},
+    );
+    await harness.outboxService.enqueueMutation(
+      entityType: 'documents',
+      entityId: 'doc1',
+      operation: 'insert',
+      payload: {'id': 'doc1'},
+    );
+    await harness.outboxService.enqueueMutation(
+      entityType: 'products',
+      entityId: 'p1',
+      operation: 'insert',
+      payload: {'id': 'p1'},
+    );
+
+    await harness.pushService.pushPending();
+
+    expect(harness.remote.upserts.length, 4);
+    expect(harness.remote.upserts[0].table, RemoteTables.products);
+    expect(harness.remote.upserts[1].table, RemoteTables.documents);
+    expect(harness.remote.upserts[2].table, RemoteTables.documentLines);
+    expect(harness.remote.upserts[3].table, RemoteTables.stockMovements);
+  });
+
+  test('failed push stores exact remote error in sync_errors', () async {
+    final harness = _createHarness(
+      remote: _FakeSyncRemoteWriter(
+        writeFailure: const AppError(
+          code: RemoteErrorCodes.validationError,
+          message: 'not-null constraint violated',
+        ),
+      ),
+    );
+    addTearDown(harness.close);
+
+    await harness.outboxService.enqueueMutation(
+      entityType: 'products',
+      entityId: 'p1',
+      operation: 'insert',
+      payload: {'id': 'p1', 'name': 'Produit'},
+    );
+
+    await harness.pushService.pushPending();
+
+    final errors = await harness.database
+        .customSelect('SELECT * FROM sync_errors')
+        .get();
+    expect(errors.length, 1);
+    expect(errors.first.data['error_message'], 'not-null constraint violated');
+    expect(errors.first.data['entity_type'], 'products');
+  });
 }
 
 const _tenantId = '11111111-1111-4111-8111-111111111111';
@@ -276,5 +352,14 @@ class _FakeSyncRemoteWriter implements SyncRemoteWriter {
     upserts.add(write);
     existingRows.add('${write.table}|${write.tenantId}|${write.entityId}');
     return const AppSuccess(null);
+  }
+
+  @override
+  Future<AppResult<Map<String, dynamic>?>> findDocumentByNumber({
+    required String tenantId,
+    required String type,
+    required String number,
+  }) async {
+    return const AppSuccess<Map<String, dynamic>?>(null);
   }
 }

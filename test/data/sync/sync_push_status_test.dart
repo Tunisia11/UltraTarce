@@ -121,6 +121,15 @@ class _StatusFakeRemoteWriter implements SyncRemoteWriter {
     existing.add('${write.table}|${write.tenantId}|${write.entityId}');
     return const AppSuccess(null);
   }
+
+  @override
+  Future<AppResult<Map<String, dynamic>?>> findDocumentByNumber({
+    required String tenantId,
+    required String type,
+    required String number,
+  }) async {
+    return const AppSuccess<Map<String, dynamic>?>(null);
+  }
 }
 
 Future<void> _waitFor(bool Function() condition) async {

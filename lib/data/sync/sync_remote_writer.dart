@@ -1,9 +1,10 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../remote/remote_tables.dart';
 import '../../core/result/app_result.dart';
 import '../remote/remote_errors.dart';
 import '../remote/supabase_client_provider.dart';
 import 'remote_sync_mapper.dart';
+import 'package:ultra_trace/data/remote/remote_tables.dart';
 
 abstract class SyncRemoteWriter {
   Future<AppResult<String>> requireAuthenticatedUserId();
@@ -12,6 +13,12 @@ abstract class SyncRemoteWriter {
     required String table,
     required String tenantId,
     required String id,
+  });
+
+  Future<AppResult<Map<String, dynamic>?>> findDocumentByNumber({
+    required String tenantId,
+    required String type,
+    required String number,
   });
 
   Future<AppResult<void>> upsert(RemoteSyncWrite write);
@@ -60,6 +67,31 @@ class SupabaseSyncRemoteWriter implements SyncRemoteWriter {
           .eq('id', id)
           .limit(1);
       return AppSuccess((rows as List).isNotEmpty);
+    } catch (error) {
+      return AppFailure(_remoteError(error, 'Lecture distante impossible.'));
+    }
+  }
+
+  @override
+  Future<AppResult<Map<String, dynamic>?>> findDocumentByNumber({
+    required String tenantId,
+    required String type,
+    required String number,
+  }) async {
+    final clientResult = _clientWithSession();
+    final clientError = clientResult.errorOrNull;
+    if (clientError != null) return AppFailure(clientError);
+    try {
+      final rows = await clientResult.valueOrNull!
+          .from(RemoteTables.documents)
+          .select('id, sync_origin_device_id')
+          .eq('tenant_id', tenantId)
+          .eq('type', type)
+          .eq('number', number)
+          .limit(1);
+      final list = rows as List;
+      if (list.isEmpty) return const AppSuccess(null);
+      return AppSuccess(list.first as Map<String, dynamic>);
     } catch (error) {
       return AppFailure(_remoteError(error, 'Lecture distante impossible.'));
     }
@@ -127,6 +159,19 @@ class SupabaseSyncRemoteWriter implements SyncRemoteWriter {
   AppError _remoteError(Object error, String fallbackMessage) {
     final text = error.toString().toLowerCase();
     final code = _errorCode(text);
+
+    String detailedMessage = fallbackMessage;
+    if (error is PostgrestException) {
+      final details = [
+        error.message,
+        error.details,
+        error.hint,
+      ].where((e) => e != null && e.toString().isNotEmpty).join(' - ');
+      detailedMessage = '$fallbackMessage ($details)';
+    } else if (code == RemoteErrorCodes.unknownRemoteError) {
+      detailedMessage = '$fallbackMessage ($error)';
+    }
+
     return AppError(
       code: code,
       message: switch (code) {
@@ -136,7 +181,7 @@ class SupabaseSyncRemoteWriter implements SyncRemoteWriter {
           'Réseau indisponible pendant la synchronisation.',
         RemoteErrorCodes.validationError =>
           'Données refusées par la base distante.',
-        _ => fallbackMessage,
+        _ => detailedMessage,
       },
       cause: error,
     );

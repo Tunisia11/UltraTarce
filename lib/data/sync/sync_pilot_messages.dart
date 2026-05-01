@@ -10,6 +10,9 @@ class SyncPilotMessages {
       'Pour cette version pilote, utilisez un poste principal. La synchronisation multi-postes complète arrive après validation.';
   static const backupReminder =
       'Téléchargez une sauvegarde à la fin de chaque journée.';
+  static const repairSyncActionLabel = 'Réparer la synchronisation';
+  static const repairSyncSuccessMessage =
+      'Réparation terminée. Envoi en cours...';
 
   static String? unavailableMessage({
     required bool authBypassEnabled,

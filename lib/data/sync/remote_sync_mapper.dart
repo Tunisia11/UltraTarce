@@ -436,7 +436,11 @@ class RemoteSyncMapper {
       'quantity_delta': quantityDelta,
       'type': direction ?? 'outbound',
       'reason': _stringValue(payload['documentNumber']),
-      'source_document_id': null,
+      'source_document_id': nullableRemoteIdFor(
+        tenantId,
+        'documents',
+        payload['sourceDocumentId'],
+      ),
       'note': jsonEncode({
         'productName': payload['productName'],
         'serialNumbers': payload['serialNumbers'],
@@ -505,6 +509,11 @@ class RemoteSyncMapper {
           table: RemoteTables.warehouses,
           id: payload['warehouse_id'] as String,
         ),
+        if (payload['source_document_id'] != null)
+          RemoteSyncDependency(
+            table: RemoteTables.documents,
+            id: payload['source_document_id'] as String,
+          ),
       ],
       _ => const [],
     };

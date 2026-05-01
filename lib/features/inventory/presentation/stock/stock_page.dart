@@ -12,7 +12,7 @@ extension _InventoryStockPage on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: const Text('Ajustement stock'),
           content: SizedBox(
             width: 620,
@@ -155,7 +155,7 @@ extension _InventoryStockPage on _InventoryHomePageState {
   }) {
     final product = _productById(productId);
     try {
-      context.read<StockCubit>().adjustStock(
+      _stockCubit.adjustStock(
         productId: productId,
         warehouseId: warehouseId,
         direction: direction,
@@ -192,7 +192,7 @@ extension _InventoryStockPage on _InventoryHomePageState {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+        builder: (_, setDialogState) => AlertDialog(
           title: const Text('Transfert dépôt'),
           content: SizedBox(
             width: 620,
@@ -333,7 +333,7 @@ extension _InventoryStockPage on _InventoryHomePageState {
     required List<String> serialNumbers,
   }) {
     try {
-      context.read<StockCubit>().transferStock(
+      _stockCubit.transferStock(
         productId: productId,
         fromWarehouseId: fromWarehouseId,
         toWarehouseId: toWarehouseId,

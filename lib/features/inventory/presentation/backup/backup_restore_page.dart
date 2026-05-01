@@ -17,8 +17,8 @@ extension _InventoryBackupRestorePage on _InventoryHomePageState {
     var hasBackupText = false;
     showDialog<void>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
           title: const Text('Restaurer une sauvegarde'),
           content: SizedBox(
             width: 720,
@@ -69,13 +69,13 @@ extension _InventoryBackupRestorePage on _InventoryHomePageState {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Annuler'),
             ),
             ElevatedButton.icon(
               onPressed: restoreConfirmed && hasBackupText
                   ? () {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogContext).pop();
                       _restoreBackup(_backupImportController.text);
                     }
                   : null,
@@ -97,7 +97,7 @@ extension _InventoryBackupRestorePage on _InventoryHomePageState {
       }
 
       _updateState(() {
-        context.read<BackupCubit>().confirmRestore(preview);
+        _backupCubit.confirmRestore(preview);
         _applyRepositoryState();
         _syncCompanyControllers();
         _section = Section.audit;
