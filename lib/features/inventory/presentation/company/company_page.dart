@@ -28,10 +28,32 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
       return;
     }
 
-    _updateState(() {
-      _companyLogoController.text = logo.dataUrl;
-    });
-    _showMessage('Logo chargé. Sauvegardez la société pour le conserver.');
+    _updateState(() => _isUploadingLogo = true);
+    final result = await _fileUploadService.uploadCompanyLogo(
+      tenantId: _tenantContext.selectedTenantId,
+      bytes: logo.bytes,
+      fileName: logo.name,
+    );
+    _updateState(() => _isUploadingLogo = false);
+
+    result.fold(
+      (storage) {
+        _updateState(() {
+          _companyLogoController.text = storage.path;
+        });
+        _showMessage('Logo synchronisé avec le cloud.');
+      },
+      (error) {
+        // Fallback to data URL for local-first if upload fails
+        _updateState(() {
+          _companyLogoController.text = logo.dataUrl;
+        });
+        _showMessage(
+          'Envoi cloud échoué, logo gardé localement: ${error.message}',
+          isError: true,
+        );
+      },
+    );
   }
 
   void _clearCompanyLogo() {
@@ -84,6 +106,8 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
 
   Future<Uint8List?> _loadLogoBytes(String source) async {
     final value = source.trim();
+    if (value.isEmpty) return null;
+
     final assetPath = _logoAssetPath(value);
     if (assetPath != null) {
       try {
@@ -94,7 +118,23 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
       }
     }
 
-    return AppSnapshotCodec.dataLogoBytes(value);
+    if (value.startsWith('data:image/')) {
+      return AppSnapshotCodec.dataLogoBytes(value);
+    }
+
+    // Try storage download if looks like a path
+    if (value.contains('/') && !value.startsWith('/')) {
+      try {
+        final supabase = Supabase.instance.client;
+        if (supabase.auth.currentSession != null) {
+          return await supabase.storage.from('company-logos').download(value);
+        }
+      } catch (e) {
+        debugPrint('Error loading logo from storage: $e');
+      }
+    }
+
+    return null;
   }
 
   void _syncCompanyControllers() {
@@ -311,10 +351,20 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _pickCompanyLogo,
-              icon: const Icon(Icons.add_photo_alternate_outlined),
+              onPressed: _isUploadingLogo ? null : _pickCompanyLogo,
+              icon: _isUploadingLogo
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_photo_alternate_outlined),
               label: Text(
-                isSystemLogo || !hasLogo ? 'Importer logo' : 'Remplacer',
+                _isUploadingLogo
+                    ? 'Envoi...'
+                    : (isSystemLogo || !hasLogo
+                          ? 'Importer logo'
+                          : 'Remplacer'),
               ),
             ),
           ),

@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   final TenantContext tenantContext;
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -78,10 +78,18 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(documents, documents.metadataJson);
         await migrator.addColumn(warehouses, warehouses.type);
       }
+      if (from < 5) {
+        // Legacy migration if anyone was on v5-preview
+        await _ensureFilesTableExists();
+      }
+      if (from < 6) {
+        await _ensureFilesTableExists();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
       await _ensureLocalSyncFoundation();
+      await _ensureFilesTableExists();
     },
   );
 
@@ -108,6 +116,31 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> _migrateToLocalSyncFoundation(Migrator migrator) async {
     await _ensureLocalSyncFoundation();
+  }
+
+  Future<void> _ensureFilesTableExists() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS files (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL,
+        bucket TEXT NOT NULL,
+        path TEXT NOT NULL,
+        type TEXT,
+        linked_entity_type TEXT,
+        linked_entity_id TEXT,
+        file_name TEXT,
+        mime_type TEXT,
+        size_bytes INTEGER,
+        created_at TEXT,
+        updated_at TEXT,
+        deleted_at TEXT,
+        created_by TEXT,
+        updated_by TEXT,
+        version INTEGER DEFAULT 1,
+        sync_origin_device_id TEXT,
+        UNIQUE(bucket, path)
+      )
+    ''');
   }
 
   Future<void> _ensureLocalSyncFoundation() async {

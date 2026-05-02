@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +9,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../../../app/app_colors.dart';
 import '../../../../domain/app_enums.dart';
 import '../../../../domain/app_models.dart';
+import '../../../../data/storage/file_upload_service.dart';
 import '../../application/products_cubit.dart';
 import '../../application/warehouse_cubit.dart';
 import '../../application/category_cubit.dart';
@@ -15,9 +17,16 @@ import '../../widgets/price_insight.dart';
 import '../widgets/product_image.dart';
 
 class ProductFormPage extends StatefulWidget {
-  const ProductFormPage({super.key, this.product});
+  const ProductFormPage({
+    super.key,
+    this.product,
+    required this.tenantId,
+    this.fileUploadService,
+  });
 
   final Product? product;
+  final String tenantId;
+  final FileUploadService? fileUploadService;
 
   @override
   State<ProductFormPage> createState() => _ProductFormPageState();
@@ -44,12 +53,19 @@ class _ProductFormPageState extends State<ProductFormPage> {
   String? _initialWarehouseId;
 
   String? _imageDataUrl;
-  bool _isUploading = false;
+  bool _isSaving = false;
+  late final String _productId;
+
+  // Deferred image upload state
+  Uint8List? _pendingImageBytes;
+  String? _pendingImageName;
+  bool _isPickingImage = false;
 
   @override
   void initState() {
     super.initState();
     final p = widget.product;
+    _productId = p?.id ?? 'prod-${DateTime.now().microsecondsSinceEpoch}';
     _nameController = TextEditingController(text: p?.name ?? '');
     _skuController = TextEditingController(text: p?.sku ?? '');
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
@@ -86,49 +102,72 @@ class _ProductFormPageState extends State<ProductFormPage> {
   }
 
   Future<void> _pickImage() async {
+    if (_isPickingImage) return;
+    debugPrint('[image_picker] start');
+
     try {
+      setState(() => _isPickingImage = true);
+
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
         allowMultiple: false,
         withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) {
+        debugPrint('[image_picker] cancelled');
+        return;
+      }
 
       final file = result.files.single;
+      debugPrint('[image_picker] selected name=${file.name} size=${file.size}');
 
+      Uint8List? bytes;
       if (kIsWeb || file.bytes != null) {
-        final bytes = file.bytes!;
-        if (bytes.length > 1024 * 1024) {
-          _showError(
-            'Image trop lourde. Choisissez une image de moins de 1 Mo.',
-          );
-          return;
-        }
-        final base64 = base64Encode(bytes);
-        final mimeType = _getMimeType(file.name);
-        setState(() {
-          _imageDataUrl = 'data:$mimeType;base64,$base64';
-        });
+        bytes = file.bytes;
       } else if (file.path != null) {
-        final ioFile = File(file.path!);
-        final size = await ioFile.length();
-        if (size > 1024 * 1024) {
-          _showError(
-            'Image trop lourde. Choisissez une image de moins de 1 Mo.',
-          );
-          return;
-        }
-        final bytes = await ioFile.readAsBytes();
-        final base64 = base64Encode(bytes);
-        final mimeType = _getMimeType(file.name);
-        setState(() {
-          _imageDataUrl = 'data:$mimeType;base64,$base64';
-        });
+        bytes = await File(file.path!).readAsBytes();
       }
+
+      if (bytes == null) return;
+
+      if (bytes.length > 1024 * 1024) {
+        _showError('Image trop lourde. Choisissez une image de moins de 1 Mo.');
+        return;
+      }
+
+      final mimeType = _getMimeType(file.name);
+      if (mimeType != 'image/jpeg' &&
+          mimeType != 'image/png' &&
+          mimeType != 'image/webp') {
+        _showError('Format image non supporté.');
+        return;
+      }
+
+      final localDataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+      setState(() {
+        _pendingImageBytes = bytes;
+        _pendingImageName = file.name;
+        _imageDataUrl = localDataUrl;
+      });
+
+      debugPrint('[image_picker] preview ready');
     } catch (e) {
+      debugPrint('[image_picker] error: $e');
       _showError('Erreur lors de la sélection de l\'image');
+    } finally {
+      setState(() => _isPickingImage = false);
     }
+  }
+
+  void _showMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? AppColors.danger : AppColors.primary,
+      ),
+    );
   }
 
   String _getMimeType(String fileName) {
@@ -159,7 +198,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint('[product_save] start');
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('[product_save] validation failed');
+      return;
+    }
 
     final isNew = widget.product == null;
     final productsCubit = context.read<ProductsCubit>();
@@ -176,13 +219,42 @@ class _ProductFormPageState extends State<ProductFormPage> {
       return;
     }
 
-    setState(() => _isUploading = true);
+    setState(() => _isSaving = true);
 
     try {
+      // 1. Deferred Image Upload
+      if (_pendingImageBytes != null && widget.fileUploadService != null) {
+        debugPrint('[product_save] image upload start');
+        final uploadResult = await widget.fileUploadService!
+            .uploadProductImage(
+              tenantId: widget.tenantId,
+              productId: _productId,
+              bytes: _pendingImageBytes!,
+              fileName: _pendingImageName ?? 'image.jpg',
+            )
+            .timeout(const Duration(seconds: 15));
+
+        uploadResult.fold(
+          (storage) {
+            debugPrint(
+              '[product_save] image upload success path=${storage.path}',
+            );
+            _imageDataUrl = storage.path;
+          },
+          (error) {
+            debugPrint(
+              '[product_save] image upload failed fallback local error=$error',
+            );
+            _showMessage(
+              'Image non envoyée au cloud. Le produit est enregistré localement.',
+            );
+            // _imageDataUrl remains the data URL set in _pickImage
+          },
+        );
+      }
+
       final product = Product(
-        id:
-            widget.product?.id ??
-            'prod-${DateTime.now().millisecondsSinceEpoch}',
+        id: _productId,
         name: _nameController.text.trim(),
         sku: sku,
         category: _category,
@@ -218,13 +290,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
         productsCubit.updateProduct(product);
       }
 
+      debugPrint('[product_save] local save success');
       if (mounted) {
         Navigator.of(context).pop(true);
       }
     } catch (e) {
+      debugPrint('[product_save] error: $e');
       _showError('Erreur lors de la sauvegarde: $e');
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      debugPrint('[product_save] complete');
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -245,7 +320,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         title: Text(isNew ? 'Nouveau Produit' : 'Modifier Produit'),
         centerTitle: false,
         actions: [
-          if (_isUploading)
+          if (_isSaving)
             const Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),

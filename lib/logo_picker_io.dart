@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 
@@ -9,12 +10,16 @@ class PickedLogo {
     required this.name,
     required this.mimeType,
     required this.size,
+    required this.bytes,
+    this.file,
   });
 
   final String dataUrl;
   final String name;
   final String mimeType;
   final int size;
+  final File? file;
+  final Uint8List bytes;
 }
 
 bool get supportsLogoImagePicker => true;
@@ -47,6 +52,8 @@ Future<PickedLogo?> pickLogoImage() async {
     name: file.name,
     mimeType: mimeType,
     size: bytes.length,
+    bytes: bytes,
+    file: file.path != null ? File(file.path!) : null,
   );
 }
 

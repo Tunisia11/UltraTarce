@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../../../app/app_colors.dart';
+import '../../../../data/storage/remote_storage_image.dart';
 
 class ProductImage extends StatelessWidget {
   const ProductImage({
@@ -46,19 +47,32 @@ class ProductImage extends StatelessWidget {
         (uri.scheme == 'https' || uri.scheme == 'http') &&
         uri.hasAuthority;
 
-    if (!canLoadRemoteImage) {
-      return _fallback();
+    if (canLoadRemoteImage) {
+      return _clip(
+        Image.network(
+          uri.toString(),
+          width: width,
+          height: height,
+          fit: fit,
+          errorBuilder: (context, error, stackTrace) => _fallback(),
+        ),
+      );
     }
 
-    return _clip(
-      Image.network(
-        uri.toString(),
+    // Probably a storage path (tenant_id/products/...)
+    if (cleanUrl.contains('/') && !cleanUrl.startsWith('/')) {
+      return RemoteStorageImage(
+        bucket: 'product-images',
+        path: cleanUrl,
         width: width,
         height: height,
         fit: fit,
-        errorBuilder: (context, error, stackTrace) => _fallback(),
-      ),
-    );
+        borderRadius: borderRadius,
+        fallback: _fallback(),
+      );
+    }
+
+    return _fallback();
   }
 
   Uint8List? _decodeDataUrl(String value) {

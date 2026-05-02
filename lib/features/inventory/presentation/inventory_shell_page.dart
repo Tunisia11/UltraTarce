@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' hide Category;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:url_launcher/url_launcher.dart';
@@ -46,6 +47,8 @@ import '../../../data/sync/local_tenant_data_status.dart';
 import '../../../data/sync/sync_metadata_repository.dart';
 import '../../../data/sync/sync_pull_service.dart';
 import '../../../data/sync/sync_conflict_repository.dart';
+import '../../../data/storage/file_metadata_repository.dart';
+import '../../../data/storage/file_upload_service.dart';
 import '../../../data/sync/sync_conflict_service.dart';
 import '../../../data/sync/presentation/sync_conflicts_page.dart';
 import '../../../domain/app_enums.dart';
@@ -243,6 +246,8 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   late final OnboardingCubit _onboardingCubit;
   late final SyncStatusCubit _syncStatusCubit;
   late final CloudBootstrapCubit _cloudBootstrapCubit;
+  late final FileUploadService _fileUploadService;
+  bool _isUploadingLogo = false;
 
   final _dashboardPrimaryActionKey = GlobalKey(debugLabel: 'guide-sale-cta');
   final _firstProductStepKey = GlobalKey(debugLabel: 'guide-first-product');
@@ -405,6 +410,12 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     ).clientOrNull;
 
     SyncPullService? pullService;
+
+    final fileMetadataRepository = FileMetadataRepository(_database);
+    _fileUploadService = FileUploadService(
+      supabase: supabaseClient,
+      metadataRepository: fileMetadataRepository,
+    );
 
     final importService = LocalCloudImportService(
       database: _database,
@@ -1187,7 +1198,11 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
                 BlocProvider<CategoryCubit>.value(value: categoryCubit),
                 BlocProvider<WarehouseCubit>.value(value: warehouseCubit),
               ],
-              child: ProductFormPage(product: product),
+              child: ProductFormPage(
+                product: product,
+                tenantId: _tenantContext.selectedTenantId,
+                fileUploadService: _fileUploadService,
+              ),
             ),
           ),
         )

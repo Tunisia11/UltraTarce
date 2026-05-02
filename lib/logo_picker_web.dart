@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
@@ -9,12 +11,14 @@ class PickedLogo {
     required this.name,
     required this.mimeType,
     required this.size,
+    required this.bytes,
   });
 
   final String dataUrl;
   final String name;
   final String mimeType;
   final int size;
+  final Uint8List bytes;
 }
 
 bool get supportsLogoImagePicker => true;
@@ -47,12 +51,17 @@ Future<PickedLogo?> pickLogoImage() {
         finish(null);
         return;
       }
+      final dataUrl = (result as JSString).toDart;
+      final commaIndex = dataUrl.indexOf(',');
+      final bytes = base64Decode(dataUrl.substring(commaIndex + 1));
+
       finish(
         PickedLogo(
-          dataUrl: (result as JSString).toDart,
+          dataUrl: dataUrl,
           name: file.name,
           mimeType: file.type.isEmpty ? _mimeTypeForLogo(file.name) : file.type,
           size: file.size,
+          bytes: bytes,
         ),
       );
     }).toJS;

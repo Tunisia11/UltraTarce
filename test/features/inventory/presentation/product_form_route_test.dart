@@ -50,7 +50,7 @@ void main() {
                           value: warehouseCubit,
                         ),
                       ],
-                      child: const ProductFormPage(),
+                      child: const ProductFormPage(tenantId: 'test-tenant'),
                     ),
                   ),
                 );

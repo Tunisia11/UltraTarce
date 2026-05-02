@@ -13,6 +13,16 @@ sealed class AppResult<T> {
     AppSuccess<T>() => null,
     AppFailure<T>(:final error) => error,
   };
+
+  R fold<R>(
+    R Function(T value) onSuccess,
+    R Function(AppError error) onFailure,
+  ) {
+    return switch (this) {
+      AppSuccess<T>(:final value) => onSuccess(value),
+      AppFailure<T>(:final error) => onFailure(error),
+    };
+  }
 }
 
 class AppSuccess<T> extends AppResult<T> {

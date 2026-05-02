@@ -181,6 +181,23 @@ extension _InventoryDocumentExportActions on _InventoryHomePageState {
         mimeType: 'application/pdf',
       );
       _showMessage(message);
+
+      // Cloud upload if available
+      final supabase = Supabase.instance.client;
+      if (supabase.auth.currentSession != null) {
+        final result = await _fileUploadService.uploadDocumentPdf(
+          tenantId: _tenantContext.selectedTenantId,
+          documentId: document.id,
+          bytes: bytes,
+          fileName: fileName,
+        );
+        result.fold(
+          (_) => debugPrint('PDF synchronisé avec le cloud: $fileName'),
+          (error) => _showMessage(
+            'PDF enregistré localement, mais échec synchro cloud.',
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         _updateState(() => _pdfExportInProgress = false);

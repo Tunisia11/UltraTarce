@@ -26,7 +26,7 @@ void main() {
           BlocProvider.value(value: warehouseCubit),
           BlocProvider.value(value: categoryCubit),
         ],
-        child: ProductFormPage(product: product),
+        child: ProductFormPage(product: product, tenantId: 'test-tenant'),
       ),
     );
   }

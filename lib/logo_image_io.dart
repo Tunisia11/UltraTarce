@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'data/storage/remote_storage_image.dart';
 
 const int _maxInlineImageBytes = 1600 * 1024;
 
@@ -33,7 +34,19 @@ class LogoImage extends StatelessWidget {
         Image.network(
           uri.toString(),
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => _fallback(),
+          errorBuilder: (context, error, stackTrace) => _fallbackRaw(),
+        ),
+      );
+    }
+
+    if (value.contains('/') && !value.startsWith('/')) {
+      return _frame(
+        RemoteStorageImage(
+          bucket: 'company-logos',
+          path: value,
+          fit: BoxFit.contain,
+          borderRadius: 8,
+          fallback: _fallbackRaw(),
         ),
       );
     }
@@ -44,12 +57,12 @@ class LogoImage extends StatelessWidget {
         Image.asset(
           assetPath,
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => _fallback(),
+          errorBuilder: (context, error, stackTrace) => _fallbackRaw(),
         ),
       );
     }
 
-    return _fallback();
+    return _frame(_fallbackRaw());
   }
 
   Widget _frame(Widget child) {
@@ -66,17 +79,12 @@ class LogoImage extends StatelessWidget {
     );
   }
 
-  Widget _fallback() {
+  Widget _fallbackRaw() {
     final initial = fallbackText.trim().isEmpty
         ? 'TN'
         : fallbackText.trim().characters.take(2).toString().toUpperCase();
-    return _frame(
-      Center(
-        child: Text(
-          initial,
-          style: const TextStyle(fontWeight: FontWeight.w900),
-        ),
-      ),
+    return Center(
+      child: Text(initial, style: const TextStyle(fontWeight: FontWeight.w900)),
     );
   }
 }
