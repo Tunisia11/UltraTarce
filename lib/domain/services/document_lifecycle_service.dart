@@ -111,7 +111,7 @@ class DocumentLifecycleService {
             ? '${document.number} clôturé: stock mobile apuré.'
             : document.status == DocumentStatus.partialReturn
             ? '${document.number}: retour partiel enregistré.'
-            : '${document.number} validé. Stock transféré au camion avec succès.',
+            : 'Sortie camion validée. Le stock est transféré vers le camion.',
     };
   }
 

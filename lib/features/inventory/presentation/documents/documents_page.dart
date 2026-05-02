@@ -7,12 +7,18 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
       children: [
         _buildHeader(
           title: 'Documents',
-          subtitle: 'Suivi avancé des ventes, paiements et PDF.',
+          subtitle:
+              'Historique business: devis, factures, BL et bons de sortie.',
           actions: [
             ElevatedButton.icon(
               onPressed: () => _updateState(() => _section = Section.sales),
               icon: const Icon(Icons.add),
               label: const Text('Faire une vente'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _openBonSortieForm(),
+              icon: const Icon(Icons.local_shipping_outlined),
+              label: const Text('Sortie camion'),
             ),
             OutlinedButton.icon(
               onPressed: _exportDocumentsCsv,
@@ -48,11 +54,18 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
   }
 
   Widget _buildDocumentsTable() {
+    final visibleDocuments = _documentTypeFilter == null
+        ? _documents
+        : _documents
+              .where((document) => document.type == _documentTypeFilter)
+              .toList();
     final draftCount = _documents
         .where((document) => document.status == DocumentStatus.draft)
         .length;
     return Panel(
       title: 'Documents',
+      icon: Icons.description_outlined,
+      subtitle: 'Filtrez et ouvrez rapidement les PDF ou actions métier.',
       trailing: Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -66,15 +79,47 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
       ),
       child: _documents.isEmpty
           ? const EmptyState(
-              text: 'Aucun document pour le moment.',
+              text:
+                  'Vos devis, factures, BL et bons de sortie apparaîtront ici.',
               icon: Icons.description_outlined,
             )
           : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final document in _documents)
-                  _buildDocumentListCard(document),
+                _buildDocumentFilters(),
+                const SizedBox(height: 12),
+                if (visibleDocuments.isEmpty)
+                  const EmptyState(
+                    text: 'Aucun document dans ce filtre.',
+                    icon: Icons.filter_alt_outlined,
+                  )
+                else
+                  for (final document in visibleDocuments)
+                    _buildDocumentListCard(document),
               ],
             ),
+    );
+  }
+
+  Widget _buildDocumentFilters() {
+    final filters = <({String label, DocumentType? type})>[
+      (label: 'Tous', type: null),
+      (label: 'Facture', type: DocumentType.facture),
+      (label: 'BL', type: DocumentType.bl),
+      (label: 'Bon de sortie', type: DocumentType.bonSortie),
+    ];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final filter in filters)
+          ChoiceChip(
+            label: Text(filter.label),
+            selected: _documentTypeFilter == filter.type,
+            onSelected: (_) =>
+                _updateState(() => _documentTypeFilter = filter.type),
+          ),
+      ],
     );
   }
 
@@ -88,7 +133,7 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
         color: selected
             ? AppColors.primary.withValues(alpha: .06)
             : AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: selected
               ? AppColors.primary.withValues(alpha: .35)
@@ -98,7 +143,7 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           onTap: () => _updateState(() => _selectedDocumentId = document.id),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -125,7 +170,7 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
                                 ),
                               ),
                               SmallChip(
-                                label: document.type.shortLabel,
+                                label: document.type.label,
                                 muted: true,
                               ),
                               _documentStatusChip(document),
@@ -135,7 +180,9 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            document.partnerName,
+                            document.type == DocumentType.bonSortie
+                                ? _sortieDestinationLine(document)
+                                : document.partnerName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w800),
@@ -163,15 +210,19 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        const Text(
-                          'Net',
-                          style: TextStyle(
+                        Text(
+                          document.type == DocumentType.bonSortie
+                              ? 'Qté'
+                              : 'Net',
+                          style: const TextStyle(
                             color: AppColors.muted,
                             fontSize: 12,
                           ),
                         ),
                         Text(
-                          formatMoney(_documentDisplayNet(document)),
+                          document.type == DocumentType.bonSortie
+                              ? '${document.lines.fold(0, (sum, line) => sum + line.quantity)}'
+                              : formatMoney(_documentDisplayNet(document)),
                           style: const TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 16,
@@ -194,6 +245,31 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
                       icon: const Icon(Icons.visibility_outlined, size: 16),
                       label: const Text('Voir'),
                     ),
+                    OutlinedButton.icon(
+                      onPressed: _pdfExportInProgress
+                          ? null
+                          : () => _exportDocumentPdf(document),
+                      icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
+                      label: const Text('Télécharger PDF'),
+                    ),
+                    if (document.type == DocumentType.bonSortie &&
+                        document.status != DocumentStatus.closed &&
+                        document.status != DocumentStatus.canceled) ...[
+                      OutlinedButton.icon(
+                        onPressed: document.status == DocumentStatus.draft
+                            ? null
+                            : () => _showSortieReturnDialog(document),
+                        icon: const Icon(Icons.undo_outlined, size: 16),
+                        label: const Text('Retour produits'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: document.status == DocumentStatus.draft
+                            ? null
+                            : () => _closeSortieWorkflow(document),
+                        icon: const Icon(Icons.check_circle_outlined, size: 16),
+                        label: const Text('Clôturer'),
+                      ),
+                    ],
                   ],
                 ),
                 if (document.type == DocumentType.facture &&
@@ -438,6 +514,13 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
             ),
           ),
         );
+        buttons.add(
+          _blockedAction(
+            label: 'Facturer bientôt',
+            reason:
+                'La facturation directe depuis une sortie camion arrive dans une prochaine phase.',
+          ),
+        );
       }
     }
     if (document.status != DocumentStatus.canceled) {
@@ -542,5 +625,18 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
       _selectedDocumentId = document.id;
       _section = Section.documents;
     });
+  }
+
+  String _sortieDestinationLine(BusinessDocument document) {
+    final target = _warehouseById(
+      document.metadata['targetWarehouseId'] ?? '',
+    ).name;
+    final driver = document.metadata['driverName']?.toString() ?? '';
+    final destination = document.metadata['destination']?.toString() ?? '';
+    return [
+      if (target.isNotEmpty) target,
+      if (driver.isNotEmpty) driver,
+      if (destination.isNotEmpty) destination,
+    ].join(' · ');
   }
 }

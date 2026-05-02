@@ -249,8 +249,11 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
 
   Widget _systemStatusPill() {
     final label = _lastSavedAt == null
-        ? 'Local'
-        : 'Sauvegardé ${formatTime(_lastSavedAt!)}';
+        ? 'Sauvegardé localement'
+        : 'Sauvegardé localement';
+    final localTooltip = _lastSavedAt == null
+        ? 'Les données locales sont conservées. $_storageStatus'
+        : 'Dernière sauvegarde locale ${formatTime(_lastSavedAt!)}. Les données locales sont conservées.';
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -266,7 +269,7 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
         _statusPill(
           label: label,
           dotColor: AppColors.emerald,
-          tooltip: _storageStatus,
+          tooltip: localTooltip,
         ),
         const SizedBox(width: 8),
         BlocBuilder<SyncStatusCubit, SyncStatusState>(
@@ -284,6 +287,7 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
                 ),
                 const SizedBox(width: 4),
                 IconButton(
+                  key: _syncActionKey,
                   tooltip: 'Synchroniser maintenant',
                   visualDensity: VisualDensity.compact,
                   onPressed: state is SyncProcessing
@@ -368,7 +372,7 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
   Color _syncStatusColor(SyncStatusState state) {
     return switch (state) {
       SyncOffline() => AppColors.subtle,
-      SyncFailed() => AppColors.danger,
+      SyncFailed() => AppColors.warning,
       SyncProcessing() || SyncPulling() => AppColors.cyan,
       SyncPending() => AppColors.warning,
       SyncSynced() || SyncIdle() => AppColors.emerald,

@@ -381,7 +381,7 @@ extension _InventoryStockPage on _InventoryHomePageState {
         _buildHeader(
           title: 'Stock',
           subtitle:
-              'Voir les alertes, corriger une quantité ou transférer entre dépôts.',
+              'Voir les alertes, corriger une quantité ou préparer une sortie camion.',
           actions: [
             ElevatedButton.icon(
               onPressed: _showStockAdjustmentDialog,
@@ -391,7 +391,7 @@ extension _InventoryStockPage on _InventoryHomePageState {
             OutlinedButton.icon(
               onPressed: () => _openBonSortieForm(),
               icon: const Icon(Icons.local_shipping_outlined),
-              label: const Text('Sortie camion'),
+              label: const Text('Préparer une sortie camion'),
             ),
             OutlinedButton.icon(
               onPressed: _showStockTransferDialog,
@@ -412,9 +412,11 @@ extension _InventoryStockPage on _InventoryHomePageState {
         ),
         Panel(
           title: 'À surveiller',
+          icon: Icons.warning_amber_outlined,
+          subtitle: 'Articles proches du seuil minimum par dépôt.',
           child: lowProducts.isEmpty
               ? const EmptyState(
-                  text: 'Aucun stock faible pour le moment.',
+                  text: 'Le stock apparaîtra après l’ajout de produits.',
                   icon: Icons.check_circle_outline,
                 )
               : Column(
@@ -443,6 +445,8 @@ extension _InventoryStockPage on _InventoryHomePageState {
         const SizedBox(height: 18),
         Panel(
           title: 'Dépôts',
+          icon: Icons.warehouse_outlined,
+          subtitle: 'Dépôts fixes et unités mobiles disponibles.',
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = constraints.maxWidth;
@@ -470,10 +474,12 @@ extension _InventoryStockPage on _InventoryHomePageState {
         const SizedBox(height: 18),
         Panel(
           title: 'Historique stock',
+          icon: Icons.history_outlined,
+          subtitle: 'Mouvements, transferts et sorties de stock récents.',
           trailing: SmallChip(label: '${_movements.length} mouvement(s)'),
           child: _movements.isEmpty
               ? const EmptyState(
-                  text: 'Aucun mouvement enregistré.',
+                  text: 'Le stock apparaîtra après l’ajout de produits.',
                   icon: Icons.history,
                 )
               : Column(

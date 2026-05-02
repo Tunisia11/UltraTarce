@@ -89,6 +89,14 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
     });
   }
 
+  Product _productForLine(DocumentLine line) {
+    final products = context.read<ProductsCubit>().state.products;
+    return products.firstWhere(
+      (product) => product.id == line.productId,
+      orElse: () => Product.initial(),
+    );
+  }
+
   void _removeLine(int index) {
     setState(() => _lines.removeAt(index));
   }
@@ -105,17 +113,22 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
     if (!_formKey.currentState!.validate()) return;
     if (_lines.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ajoutez au moins un produit.')),
+        const SnackBar(content: Text('Ajoutez au moins un produit à charger.')),
       );
       return;
     }
 
-    if (_sourceWarehouseId == null || _targetWarehouseId == null) {
+    if (_sourceWarehouseId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sélectionnez les dépôts source et destination.'),
-        ),
+        const SnackBar(content: Text('Choisissez un dépôt source.')),
       );
+      return;
+    }
+
+    if (_targetWarehouseId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Choisissez un camion.')));
       return;
     }
 
@@ -123,11 +136,26 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Le dépôt de départ et de destination doivent être différents.',
+            'Les dépôts source et destination doivent être différents.',
           ),
         ),
       );
       return;
+    }
+
+    for (final line in _lines) {
+      final product = _productForLine(line);
+      if (product.stockTracked &&
+          product.stockIn(_sourceWarehouseId!) < line.quantity) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Stock insuffisant dans le dépôt source pour ${line.label}.',
+            ),
+          ),
+        );
+        return;
+      }
     }
 
     final doc = BusinessDocument(
@@ -167,8 +195,8 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
       appBar: AppBar(
         title: Text(
           widget.initialDocument == null
-              ? 'Nouvelle Sortie Camion'
-              : 'Modifier Sortie Camion',
+              ? 'Préparer une sortie camion'
+              : 'Modifier une sortie camion',
           style: const TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -177,7 +205,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
             child: ElevatedButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('Enregistrer Brouillon'),
+              label: const Text('Enregistrer brouillon'),
             ),
           ),
         ],
@@ -189,6 +217,18 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                'Préparer une sortie camion',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Transférez des produits du dépôt vers un camion ou une unité mobile.',
+                style: TextStyle(color: AppColors.muted),
+              ),
+              const SizedBox(height: 20),
               _buildHeaderPanel(),
               const SizedBox(height: 24),
               _buildLinesPanel(),
@@ -201,7 +241,10 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
 
   Widget _buildHeaderPanel() {
     return Panel(
-      title: 'Informations Générales',
+      title: 'Informations logistiques',
+      icon: Icons.local_shipping_outlined,
+      subtitle:
+          'Renseignez le dépôt source, le camion et la tournée avant le chargement.',
       child: Column(
         children: [
           Row(
@@ -219,7 +262,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                     return DropdownButtonFormField<String>(
                       initialValue: _sourceWarehouseId,
                       decoration: const InputDecoration(
-                        labelText: 'Dépôt de départ (Source)',
+                        labelText: 'Dépôt source',
                         prefixIcon: Icon(Icons.warehouse_outlined),
                       ),
                       items: sourceWarehouses.map((w) {
@@ -230,7 +273,8 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                       }).toList(),
                       onChanged: (val) =>
                           setState(() => _sourceWarehouseId = val),
-                      validator: (val) => val == null ? 'Requis' : null,
+                      validator: (val) =>
+                          val == null ? 'Choisissez un dépôt source.' : null,
                     );
                   },
                 ),
@@ -260,7 +304,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                     return DropdownButtonFormField<String>(
                       initialValue: _targetWarehouseId,
                       decoration: const InputDecoration(
-                        labelText: 'Véhicule / Dépôt mobile (Cible)',
+                        labelText: 'Camion / unité mobile',
                         prefixIcon: Icon(Icons.local_shipping_outlined),
                       ),
                       items: mobileWarehouses.map((w) {
@@ -271,7 +315,8 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                       }).toList(),
                       onChanged: (val) =>
                           setState(() => _targetWarehouseId = val),
-                      validator: (val) => val == null ? 'Requis' : null,
+                      validator: (val) =>
+                          val == null ? 'Choisissez un camion.' : null,
                     );
                   },
                 ),
@@ -285,7 +330,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                 child: TextFormField(
                   controller: _driverController,
                   decoration: const InputDecoration(
-                    labelText: 'Chauffeur / Responsable',
+                    labelText: 'Chauffeur',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                 ),
@@ -295,7 +340,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                 child: TextFormField(
                   controller: _vehicleController,
                   decoration: const InputDecoration(
-                    labelText: 'Matricule Véhicule',
+                    labelText: 'Matricule véhicule',
                     prefixIcon: Icon(Icons.directions_car_outlined),
                   ),
                 ),
@@ -306,7 +351,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
           TextFormField(
             controller: _destinationController,
             decoration: const InputDecoration(
-              labelText: 'Destination / Zone',
+              labelText: 'Destination / tournée',
               prefixIcon: Icon(Icons.map_outlined),
             ),
           ),
@@ -315,7 +360,7 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
             controller: _noteController,
             maxLines: 2,
             decoration: const InputDecoration(
-              labelText: 'Notes / Instructions',
+              labelText: 'Notes',
               prefixIcon: Icon(Icons.note_outlined),
             ),
           ),
@@ -327,10 +372,12 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
   Widget _buildLinesPanel() {
     return Panel(
       title: 'Produits à charger',
+      icon: Icons.inventory_2_outlined,
+      subtitle: 'Ajoutez les lignes et la quantité à charger par produit.',
       trailing: _buildProductPicker(),
       child: _lines.isEmpty
           ? const EmptyState(
-              text: 'Aucun produit sélectionné.',
+              text: 'Créez un camion/dépôt mobile pour préparer une sortie.',
               icon: Icons.inventory_2_outlined,
             )
           : Column(
@@ -368,7 +415,8 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
                 controller: controller,
                 focusNode: focusNode,
                 decoration: const InputDecoration(
-                  hintText: 'Ajouter un produit...',
+                  hintText: 'Produit',
+                  helperText: 'Rechercher par nom ou SKU',
                   prefixIcon: Icon(Icons.search, size: 20),
                   isDense: true,
                 ),
@@ -419,6 +467,11 @@ class _BonSortieFormPageState extends State<BonSortieFormPage> {
             ),
           ),
           const SizedBox(width: 16),
+          const Text(
+            'Quantité à charger',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
+          const SizedBox(width: 8),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [

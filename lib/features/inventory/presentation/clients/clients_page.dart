@@ -76,7 +76,7 @@ extension _InventoryClientsPage on _InventoryHomePageState {
           child: partners.isEmpty
               ? EmptyState(
                   text: type == PartnerType.client
-                      ? 'Aucun client. Ajoutez un client ou créez un client comptoir pour les ventes rapides.'
+                      ? 'Ajoutez un client ou utilisez Client comptoir pour vendre rapidement.'
                       : 'Aucun fournisseur. Ajoutez un contact quand vous commencez à recevoir du stock.',
                   icon: type == PartnerType.client
                       ? Icons.groups_2_outlined
@@ -134,7 +134,7 @@ extension _InventoryClientsPage on _InventoryHomePageState {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: AppColors.border.withValues(alpha: .18)),
         ),
         child: Column(

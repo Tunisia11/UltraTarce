@@ -23,4 +23,7 @@ class AppColors {
   static const success = Color(0xFF00A86B);
   static const cyan = Color(0xFF186872);
   static const inverse = Color(0xFF2E3132);
+  static const softTeal = Color(0xFFEAF7F5);
+  static const softWarning = Color(0xFFFFF4EA);
+  static const softSuccess = Color(0xFFEAF8F1);
 }

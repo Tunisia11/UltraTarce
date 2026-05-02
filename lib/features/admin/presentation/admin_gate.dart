@@ -11,6 +11,9 @@ import 'admin_sync_health_page.dart';
 import 'admin_subscriptions_page.dart';
 import '../data/admin_subscription_repository.dart';
 import '../application/admin_subscription_cubit.dart';
+import '../data/admin_trial_request_repository.dart';
+import '../application/admin_trial_requests_cubit.dart';
+import 'admin_trial_requests_page.dart';
 
 class AdminGate extends StatefulWidget {
   const AdminGate({super.key, this.repository, this.subscriptionRepository});
@@ -25,17 +28,29 @@ class AdminGate extends StatefulWidget {
 class _AdminGateState extends State<AdminGate> {
   late final AdminRepository _repository;
   late final AdminSubscriptionRepository _subscriptionRepository;
+  late final AdminTrialRequestRepository? _trialRequestRepository;
   bool? _isAdmin;
 
   @override
   void initState() {
     super.initState();
-    _repository =
-        widget.repository ?? AdminRepository(Supabase.instance.client);
+    final supabaseClient = _maybeSupabaseClient();
+    _repository = widget.repository ?? AdminRepository(supabaseClient!);
     _subscriptionRepository =
         widget.subscriptionRepository ??
-        AdminSubscriptionRepository(Supabase.instance.client);
+        AdminSubscriptionRepository(supabaseClient!);
+    _trialRequestRepository = supabaseClient == null
+        ? null
+        : AdminTrialRequestRepository(supabaseClient);
     _checkAdmin();
+  }
+
+  SupabaseClient? _maybeSupabaseClient() {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _checkAdmin() async {
@@ -91,6 +106,10 @@ class _AdminGateState extends State<AdminGate> {
         ),
         BlocProvider(
           create: (_) => AdminSubscriptionCubit(_subscriptionRepository),
+        ),
+        BlocProvider(
+          create: (_) =>
+              AdminTrialRequestsCubit(_trialRequestRepository)..loadRequests(),
         ),
       ],
       child: const AdminShell(),
@@ -166,6 +185,11 @@ class _AdminShellState extends State<AdminShell> {
                 selectedIcon: Icon(Icons.subscriptions),
                 label: Text('Abonnements'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.assignment_ind_outlined),
+                selectedIcon: Icon(Icons.assignment_ind),
+                label: Text('Demandes d\'essai'),
+              ),
             ],
           ),
           const VerticalDivider(
@@ -181,6 +205,7 @@ class _AdminShellState extends State<AdminShell> {
                 AdminTenantsPage(),
                 AdminSyncHealthPage(),
                 AdminSubscriptionsPage(),
+                AdminTrialRequestsPage(),
               ],
             ),
           ),

@@ -108,6 +108,10 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
     final company = document.companySnapshot ?? _company;
     return Panel(
       title: 'Aperçu A4',
+      icon: Icons.article_outlined,
+      subtitle: document.type == DocumentType.bonSortie
+          ? 'Document logistique avec dépôt source, camion, chauffeur et tournée.'
+          : 'Aperçu propre avec logo, identité société et totaux.',
       trailing: OutlinedButton.icon(
         onPressed: _pdfExportInProgress
             ? null
@@ -198,7 +202,11 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
                 children: [
                   if (document.type == DocumentType.bonSortie) ...[
                     PreviewInfo(
-                      label: 'Dépôt mobile',
+                      label: 'Dépôt source',
+                      value: _warehouseById(document.warehouseId).name,
+                    ),
+                    PreviewInfo(
+                      label: 'Camion',
                       value: _warehouseById(
                         document.metadata['targetWarehouseId'] ?? '',
                       ).name,
@@ -224,7 +232,7 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
                             .isNotEmpty ??
                         false)
                       PreviewInfo(
-                        label: 'Zone',
+                        label: 'Destination / tournée',
                         value: document.metadata['destination'],
                       ),
                   ] else ...[
@@ -238,10 +246,11 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
                       value: document.partnerAddress,
                     ),
                   ],
-                  PreviewInfo(
-                    label: 'Magasin',
-                    value: _warehouseById(document.warehouseId).name,
-                  ),
+                  if (document.type != DocumentType.bonSortie)
+                    PreviewInfo(
+                      label: 'Magasin',
+                      value: _warehouseById(document.warehouseId).name,
+                    ),
                   if (document.sourceNumber != null)
                     PreviewInfo(
                       label: 'Origine',
@@ -307,6 +316,25 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
   }
 
   Widget _previewTotals(BusinessDocument document) {
+    if (document.type == DocumentType.bonSortie) {
+      final loaded = document.lines.fold(0, (sum, line) => sum + line.quantity);
+      final returned = document.returnedQuantities.values.fold(
+        0,
+        (sum, quantity) => sum + quantity,
+      );
+      return Column(
+        children: [
+          PreviewTotalRow(label: 'Quantités chargées', value: '$loaded'),
+          PreviewTotalRow(label: 'Quantités retournées', value: '$returned'),
+          const Divider(),
+          PreviewTotalRow(
+            label: 'Restant camion',
+            value: '${loaded - returned}',
+            strong: true,
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         PreviewTotalRow(

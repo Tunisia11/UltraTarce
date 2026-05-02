@@ -27,7 +27,7 @@ class MetricCard extends StatelessWidget {
       label: '$label: $value. $detail.',
       child: Container(
         width: width,
-        height: 136,
+        height: 132,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: AppColors.surfaceLowest,
@@ -35,9 +35,9 @@ class MetricCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: AppColors.ink.withValues(alpha: .04),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              color: AppColors.ink.withValues(alpha: .045),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -96,7 +96,7 @@ class MetricCard extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 26),
+              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
             ),
           ],
         ),

@@ -193,6 +193,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   String _selectedWarehouseId = 'sfax';
   String _selectedTargetWarehouseId = '';
   String? _selectedDocumentId;
+  DocumentType? _documentTypeFilter;
   String? _editingDocumentId;
   String _productCategoryFilter = 'Tous';
   String _productQuery = '';
@@ -250,14 +251,19 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   bool _isUploadingLogo = false;
 
   final _dashboardPrimaryActionKey = GlobalKey(debugLabel: 'guide-sale-cta');
+  final _companyProfileStepKey = GlobalKey(debugLabel: 'guide-company');
+  final _firstDepotStepKey = GlobalKey(debugLabel: 'guide-depot');
   final _firstProductStepKey = GlobalKey(debugLabel: 'guide-first-product');
   final _firstClientStepKey = GlobalKey(debugLabel: 'guide-first-client');
   final _firstSaleStepKey = GlobalKey(debugLabel: 'guide-first-sale');
+  final _sortieCamionStepKey = GlobalKey(debugLabel: 'guide-sortie-camion');
+  final _syncStepKey = GlobalKey(debugLabel: 'guide-sync');
   final _productCreateActionKey = GlobalKey(debugLabel: 'guide-product-create');
   final _clientCreateActionKey = GlobalKey(debugLabel: 'guide-client-create');
   final _salesProductSearchKey = GlobalKey(debugLabel: 'guide-sales-search');
   final _salesValidateKey = GlobalKey(debugLabel: 'guide-sales-validate');
   final _saleSuccessKey = GlobalKey(debugLabel: 'guide-sale-success');
+  final _syncActionKey = GlobalKey(debugLabel: 'guide-sync-action');
 
   @override
   void initState() {
@@ -777,8 +783,6 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
 
   double get _dailySales => _dashboardCubit.state.dailySales;
 
-  double get _monthlySales => _dashboardCubit.state.monthlySales;
-
   List<Product> get _lowStockProducts => _stockCubit.state.lowStockProducts;
 
   List<BusinessDocument> get _draftDocuments =>
@@ -803,7 +807,25 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
       _hasFirstProduct && _hasFirstClient && _hasFirstSale;
 
   bool get _shouldShowFirstSuccessGuide =>
-      !_guidedSetupDismissed && !_firstSuccessComplete;
+      !_guidedSetupDismissed && (!_firstSuccessComplete || _guidedFocusActive);
+
+  bool get _companyIdentityReady =>
+      _company.name.trim().isNotEmpty &&
+      _company.taxId.trim().isNotEmpty &&
+      _company.address.trim().isNotEmpty &&
+      _company.city.trim().isNotEmpty;
+
+  bool get _hasFirstDepot => _warehouses.any((warehouse) => warehouse.active);
+
+  bool get _hasMobileWarehouse => _warehouses.any(
+    (warehouse) => warehouse.active && warehouse.type == 'mobile',
+  );
+
+  bool get _hasBonSortie => _documents.any(
+    (document) =>
+        document.type == DocumentType.bonSortie &&
+        document.status != DocumentStatus.canceled,
+  );
 
   bool get _hasMeaningfulDashboardData =>
       _hasFirstSale ||
@@ -849,7 +871,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
       hasSupabaseConfig: _appConfig.hasSupabaseConfig,
     );
     if (unavailableMessage != null) {
-      _showMessage(unavailableMessage, isError: true);
+      _showMessage('$unavailableMessage Les données locales sont conservées.');
       return;
     }
     final pendingReport = await _syncPushService.pushPending(limit: 100);
@@ -873,7 +895,6 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
 
       _showMessage(
         'Synchronisation échouée: ${lastError?.message ?? "Erreur inconnue"}. Les données locales sont conservées.',
-        isError: true,
       );
 
       if (kDebugMode) {
@@ -899,7 +920,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
       hasSupabaseConfig: _appConfig.hasSupabaseConfig,
     );
     if (unavailableMessage != null) {
-      _showMessage(unavailableMessage, isError: true);
+      _showMessage('$unavailableMessage Les données locales sont conservées.');
       return;
     }
 

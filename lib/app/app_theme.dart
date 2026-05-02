@@ -24,8 +24,19 @@ ThemeData buildAppTheme() {
       ),
       titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
       titleMedium: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-      bodyLarge: TextStyle(fontSize: 15),
-      bodyMedium: TextStyle(fontSize: 13),
+      bodyLarge: TextStyle(fontSize: 15, height: 1.45),
+      bodyMedium: TextStyle(fontSize: 13, height: 1.45),
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.surfaceLowest,
+      foregroundColor: AppColors.ink,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      titleTextStyle: TextStyle(
+        color: AppColors.ink,
+        fontSize: 18,
+        fontWeight: FontWeight.w900,
+      ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -41,6 +52,14 @@ ThemeData buildAppTheme() {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.emerald, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1.2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     ),

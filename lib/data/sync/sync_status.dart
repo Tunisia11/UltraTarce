@@ -44,7 +44,7 @@ class SyncOffline extends SyncStatusState {
   }) : super(isOnline: false);
 
   @override
-  String get label => 'Hors ligne';
+  String get label => 'Sauvegardé localement';
 }
 
 class SyncPending extends SyncStatusState {
@@ -58,7 +58,7 @@ class SyncPending extends SyncStatusState {
   });
 
   @override
-  String get label => 'Synchronisation en attente';
+  String get label => 'Sauvegardé localement';
 }
 
 class SyncProcessing extends SyncStatusState {
@@ -72,7 +72,7 @@ class SyncProcessing extends SyncStatusState {
   });
 
   @override
-  String get label => 'Synchronisation...';
+  String get label => 'Synchronisation en cours…';
 }
 
 class SyncFailed extends SyncStatusState {
@@ -86,7 +86,7 @@ class SyncFailed extends SyncStatusState {
   });
 
   @override
-  String get label => 'Erreur de synchronisation';
+  String get label => 'À vérifier';
 }
 
 class SyncSynced extends SyncStatusState {
@@ -114,5 +114,5 @@ class SyncPulling extends SyncStatusState {
   });
 
   @override
-  String get label => 'Téléchargement des changements...';
+  String get label => 'Synchronisation en cours…';
 }

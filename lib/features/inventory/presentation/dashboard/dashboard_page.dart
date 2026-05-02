@@ -16,7 +16,7 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
         _buildHeader(
           title: 'Pilotage quotidien',
           subtitle:
-              'Ce qui demande votre attention maintenant: vendre, encaisser, stock.',
+              'Vendez, suivez le stock et préparez vos sorties camion en quelques clics.',
           actions: [
             ElevatedButton.icon(
               onPressed: () => _goToSales(),
@@ -61,61 +61,20 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(
-          title: 'Prêt à travailler',
+          title: 'Pilotage quotidien',
           subtitle:
-              'Commencez par une action simple. Les chiffres apparaîtront après les premières ventes.',
+              'Vendez, suivez le stock et préparez vos sorties camion en quelques clics.',
         ),
-        Panel(
-          title: 'Que voulez-vous faire maintenant ?',
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              const spacing = 12.0;
-              final width = _responsiveTileWidth(
-                maxWidth: constraints.maxWidth,
-                minTileWidth: 210,
-                spacing: spacing,
-                maxColumns: 3,
-              );
-              return Wrap(
-                spacing: spacing,
-                runSpacing: spacing,
-                children: [
-                  QuickActionButton(
-                    width: width,
-                    label: 'Faire une vente',
-                    detail: 'Produit, quantité, validation',
-                    icon: Icons.flash_on_outlined,
-                    color: AppColors.primary,
-                    onTap: _goToSales,
-                  ),
-                  QuickActionButton(
-                    width: width,
-                    label: 'Ajouter produit',
-                    detail: 'Nom, prix, stock',
-                    icon: Icons.add_box_outlined,
-                    color: AppColors.cyan,
-                    onTap: () => _openProductForm(),
-                  ),
-                  QuickActionButton(
-                    width: width,
-                    label: 'Ajouter client',
-                    detail: 'Nom et téléphone',
-                    icon: Icons.person_add_alt_1_outlined,
-                    color: AppColors.success,
-                    onTap: () => _showPartnerDialog(type: PartnerType.client),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
+        _buildActionPanel(),
         const SizedBox(height: 18),
-        const InlineNotice(
+        _buildDashboardMetrics(),
+        const SizedBox(height: 18),
+        EmptyState(
+          title: 'Commencez simplement',
+          text: 'Commencez par ajouter un produit ou faire une première vente.',
           icon: Icons.insights_outlined,
-          title: 'Pas encore de chiffres utiles',
-          message:
-              'Trace Ultra affichera le chiffre d’affaires, les alertes et l’activité dès qu’il y aura des ventes ou des stocks à suivre.',
-          color: AppColors.primary,
+          actionLabel: 'Ajouter produit',
+          onAction: () => _openProductForm(),
         ),
         const SizedBox(height: 22),
         _buildBusinessHealthStrip(),
@@ -128,8 +87,9 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildHeader(
-          title: 'Préparer votre magasin',
-          subtitle: 'Tarek vous accompagne vers une première vente réelle.',
+          title: 'Pilotage quotidien',
+          subtitle:
+              'Vendez, suivez le stock et préparez vos sorties camion en quelques clics.',
           actions: [
             ElevatedButton.icon(
               key: _dashboardPrimaryActionKey,
@@ -139,10 +99,14 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
             ),
           ],
         ),
+        _buildActionPanel(),
+        const SizedBox(height: 18),
+        _buildDashboardMetrics(),
+        const SizedBox(height: 18),
         _buildGettingStartedPanel(),
         const SizedBox(height: 18),
         Panel(
-          title: 'Pour l’instant, une seule priorité',
+          title: 'Prochaine meilleure action',
           child: Text(
             _firstUseNextActionText(),
             style: const TextStyle(
@@ -158,12 +122,15 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
 
   String _firstUseNextActionText() {
     if (!_hasFirstProduct) {
-      return 'Ajoutez un produit réel: nom, code, prix, stock. Le reste peut attendre.';
+      return 'Commençons par ajouter votre premier produit: nom, code, prix et stock.';
     }
     if (!_hasFirstClient) {
-      return 'Ajoutez un client, ou créez simplement un client comptoir.';
+      return 'Ajoutez un client, ou utilisez Client comptoir pour vendre rapidement.';
     }
-    return 'Vous êtes prêt: client, produit, quantité, validation.';
+    if (!_hasFirstSale) {
+      return 'Parfait. Maintenant, vous pouvez faire votre première vente.';
+    }
+    return 'Vos données sont enregistrées localement. Cliquez sur Synchroniser pour les sauvegarder dans le cloud.';
   }
 
   Widget _buildLowStockPanel() {
@@ -172,7 +139,10 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
       child: Column(
         children: [
           if (_lowStockProducts.isEmpty)
-            const EmptyState(text: 'Aucune alerte pour le moment.')
+            const EmptyState(
+              text: 'Le stock apparaîtra après l’ajout de produits.',
+              icon: Icons.check_circle_outline,
+            )
           else
             for (final product in _lowStockProducts)
               ListRow(
@@ -200,7 +170,7 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
           maxWidth: constraints.maxWidth,
           minTileWidth: 220,
           spacing: spacing,
-          maxColumns: 4,
+          maxColumns: 5,
         );
         return Wrap(
           spacing: spacing,
@@ -216,12 +186,11 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
             ),
             MetricCard(
               width: width,
-              label: 'CA du mois',
-              value: formatMoney(_monthlySales),
-              detail:
-                  '${DateTime.now().month.toString().padLeft(2, '0')}/${DateTime.now().year}',
+              label: 'Ventes',
+              value: '${_todaySalesCount()}',
+              detail: "Aujourd'hui",
               accent: AppColors.cyan,
-              icon: Icons.calendar_month_outlined,
+              icon: Icons.point_of_sale_outlined,
             ),
             MetricCard(
               width: width,
@@ -233,11 +202,19 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
             ),
             MetricCard(
               width: width,
-              label: 'À terminer',
-              value: '${_draftDocuments.length}',
-              detail: 'Ventes ou suivis en attente',
-              accent: AppColors.danger,
-              icon: Icons.lock_clock_outlined,
+              label: 'Sorties en cours',
+              value: '${_openSortieCount()}',
+              detail: 'Camions à suivre',
+              accent: AppColors.primaryContainer,
+              icon: Icons.local_shipping_outlined,
+            ),
+            MetricCard(
+              width: width,
+              label: 'Documents à suivre',
+              value: '${_documentsToFollowCount()}',
+              detail: 'Brouillons ou paiements',
+              accent: AppColors.warning,
+              icon: Icons.description_outlined,
             ),
           ],
         );
@@ -260,6 +237,9 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
   Widget _buildGettingStartedPanel() {
     return Panel(
       title: 'Première réussite guidée',
+      icon: Icons.auto_awesome_outlined,
+      subtitle:
+          'Bienvenue dans Trace Ultra. Tarek vous aide à préparer votre espace en quelques minutes.',
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 760;
@@ -290,7 +270,7 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'On crée un produit, un client, puis une vente réelle. Pas besoin de remplir tous les détails maintenant.',
+                      'On complète les bases, on ajoute un produit, puis on prépare la première vente et la sortie camion si nécessaire.',
                       style: TextStyle(color: AppColors.muted, height: 1.35),
                     ),
                   ],
@@ -310,8 +290,25 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   StepPill(
-                    key: _firstProductStepKey,
+                    key: _companyProfileStepKey,
                     number: '1',
+                    title: 'Profil société',
+                    subtitle: 'Nom, MF, adresse',
+                    done: _companyIdentityReady,
+                    onTap: () =>
+                        _updateState(() => _section = Section.settings),
+                  ),
+                  StepPill(
+                    key: _firstDepotStepKey,
+                    number: '2',
+                    title: 'Premier dépôt',
+                    subtitle: 'Magasin ou réserve',
+                    done: _hasFirstDepot,
+                    onTap: () => _showWarehouseDialog(),
+                  ),
+                  StepPill(
+                    key: _firstProductStepKey,
+                    number: '3',
                     title: 'Premier produit',
                     subtitle: 'Nom, prix, stock',
                     done: _hasFirstProduct,
@@ -319,7 +316,7 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
                   ),
                   StepPill(
                     key: _firstClientStepKey,
-                    number: '2',
+                    number: '4',
                     title: 'Premier client',
                     subtitle: 'Nom, téléphone',
                     done: _hasFirstClient,
@@ -327,11 +324,29 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
                   ),
                   StepPill(
                     key: _firstSaleStepKey,
-                    number: '3',
+                    number: '5',
                     title: 'Première vente',
                     subtitle: 'Produit, total, valider',
                     done: _hasFirstSale,
                     onTap: () => _goToSales(),
+                  ),
+                  StepPill(
+                    key: _sortieCamionStepKey,
+                    number: '6',
+                    title: 'Sortie camion',
+                    subtitle: 'Camion et chargement',
+                    done: _hasBonSortie,
+                    onTap: () => _hasMobileWarehouse
+                        ? _openBonSortieForm()
+                        : _showWarehouseDialog(null, 'mobile'),
+                  ),
+                  StepPill(
+                    key: _syncStepKey,
+                    number: '7',
+                    title: 'Synchroniser',
+                    subtitle: 'Sauvegarde cloud',
+                    done: false,
+                    onTap: _triggerManualPushSync,
                   ),
                 ],
               ),
@@ -372,6 +387,8 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
   Widget _buildActionPanel() {
     return Panel(
       title: 'Actions rapides',
+      subtitle: 'Les raccourcis du quotidien pour vendre, stocker et livrer.',
+      icon: Icons.bolt_outlined,
       child: LayoutBuilder(
         builder: (context, constraints) {
           const spacing = 12.0;
@@ -395,14 +412,6 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
               ),
               QuickActionButton(
                 width: width,
-                label: 'Sortie camion',
-                detail: 'Charger produits dans un véhicule',
-                icon: Icons.local_shipping_outlined,
-                color: AppColors.cyan,
-                onTap: () => _openBonSortieForm(),
-              ),
-              QuickActionButton(
-                width: width,
                 label: 'Ajouter produit',
                 detail: 'Prix, TVA, stock',
                 icon: Icons.inventory_2_outlined,
@@ -419,22 +428,18 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
               ),
               QuickActionButton(
                 width: width,
-                label: 'Stock faible',
-                detail: '${_lowStockProducts.length} à traiter',
-                icon: Icons.warning_amber_outlined,
-                color: _lowStockProducts.isEmpty
-                    ? AppColors.muted
-                    : AppColors.warning,
-                onTap: () => _updateState(() => _section = Section.stock),
+                label: 'Sortie camion',
+                detail: 'Charger un camion',
+                icon: Icons.local_shipping_outlined,
+                color: AppColors.primaryContainer,
+                onTap: () => _openBonSortieForm(),
               ),
               QuickActionButton(
                 width: width,
-                label: 'À terminer',
-                detail: '${_draftDocuments.length} en attente',
-                icon: Icons.lock_clock_outlined,
-                color: _draftDocuments.isEmpty
-                    ? AppColors.muted
-                    : AppColors.danger,
+                label: 'Voir documents',
+                detail: 'PDF, paiements, suivis',
+                icon: Icons.description_outlined,
+                color: AppColors.success,
                 onTap: () => _updateState(() => _section = Section.documents),
               ),
             ],
@@ -450,7 +455,10 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
       child: Column(
         children: [
           if (bestSellers.isEmpty)
-            const EmptyState(text: 'Les ventes apparaîtront après facturation.')
+            const EmptyState(
+              text: 'Les ventes apparaîtront après facturation.',
+              icon: Icons.trending_up,
+            )
           else
             for (final entry in bestSellers)
               ListRow(
@@ -471,7 +479,11 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
       child: Column(
         children: [
           if (entries.isEmpty)
-            const EmptyState(text: 'Aucune activité récente pour le moment.')
+            const EmptyState(
+              text:
+                  'Commencez par ajouter un produit ou faire une première vente.',
+              icon: Icons.history,
+            )
           else
             for (final entry in entries.take(6))
               ListRow(
@@ -578,5 +590,44 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
 
   List<MapEntry<Product, int>> _bestSellers() {
     return MetricsService.bestSellers(_documents, _products);
+  }
+
+  int _todaySalesCount() {
+    final now = DateTime.now();
+    return _documents.where((document) {
+      final sameDay =
+          document.date.year == now.year &&
+          document.date.month == now.month &&
+          document.date.day == now.day;
+      final salesType =
+          document.type == DocumentType.facture ||
+          document.type == DocumentType.bl;
+      return sameDay &&
+          salesType &&
+          document.status == DocumentStatus.validated;
+    }).length;
+  }
+
+  int _openSortieCount() {
+    return _documents
+        .where(
+          (document) =>
+              document.type == DocumentType.bonSortie &&
+              document.status != DocumentStatus.closed &&
+              document.status != DocumentStatus.canceled,
+        )
+        .length;
+  }
+
+  int _documentsToFollowCount() {
+    return _documents.where((document) {
+      if (document.status == DocumentStatus.draft ||
+          document.status == DocumentStatus.partialReturn) {
+        return true;
+      }
+      return document.type == DocumentType.facture &&
+          document.status == DocumentStatus.validated &&
+          _invoiceRemainingDue(document) > .001;
+    }).length;
   }
 }

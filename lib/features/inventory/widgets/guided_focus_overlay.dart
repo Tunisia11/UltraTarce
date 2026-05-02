@@ -183,7 +183,7 @@ class _GuidePanel extends StatelessWidget {
                   color: AppColors.surfaceLowest,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(
-                    color: AppColors.emerald.withValues(alpha: .28),
+                    color: AppColors.emerald.withValues(alpha: .24),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -200,13 +200,23 @@ class _GuidePanel extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(18),
-                          child: Image.asset(
-                            AppAssets.welcomeMascot,
-                            width: compact ? 54 : 70,
-                            height: compact ? 54 : 70,
-                            fit: BoxFit.cover,
+                        Container(
+                          width: compact ? 58 : 74,
+                          height: compact ? 58 : 74,
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.softTeal,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: AppColors.emerald.withValues(alpha: .18),
+                            ),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.asset(
+                              AppAssets.welcomeMascot,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                         SizedBox(width: compact ? 10 : 14),
@@ -280,7 +290,7 @@ class _GuidePanel extends StatelessWidget {
                                 ? Icons.check_circle_outline
                                 : Icons.arrow_forward_rounded,
                           ),
-                          label: Text(step.primaryLabel),
+                          label: const Text('Faire maintenant'),
                         ),
                       ],
                     ),

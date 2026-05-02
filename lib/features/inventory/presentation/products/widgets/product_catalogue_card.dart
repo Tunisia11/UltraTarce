@@ -19,13 +19,20 @@ extension _InventoryProductCatalogueCard on _InventoryHomePageState {
         decoration: BoxDecoration(
           color: low
               ? AppColors.warning.withValues(alpha: .06)
-              : AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
+              : AppColors.surfaceLowest,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: low
                 ? AppColors.warning.withValues(alpha: .28)
                 : AppColors.border.withValues(alpha: .18),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.ink.withValues(alpha: .035),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -49,9 +49,7 @@ class _PendingInvitesPageState extends State<PendingInvitesPage> {
             if (state is InviteAccepted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text(
-                    'Invitation acceptée ! Rechargez la liste des sociétés.',
-                  ),
+                  content: Text('Invitation acceptée.'),
                   backgroundColor: AppColors.emerald,
                 ),
               );

@@ -49,9 +49,32 @@ void main() {
 
     await _pumpWorkspace(tester);
 
-    expect(find.text('Préparer votre magasin'), findsOneWidget);
+    expect(find.text('Pilotage quotidien'), findsOneWidget);
+    expect(find.text('Faire une vente'), findsWidgets);
+    expect(find.text('Ajouter produit'), findsWidgets);
+    expect(find.text('Ajouter client'), findsWidgets);
+    expect(find.text('Sortie camion'), findsWidgets);
+    expect(find.text('Voir documents'), findsWidgets);
     expect(find.text('Première réussite guidée'), findsOneWidget);
     expect(find.text('Démarrer avec Tarek'), findsOneWidget);
+  });
+
+  testWidgets('Tarek guide renders with navigation controls', (tester) async {
+    _setDesktopViewport(tester);
+    writePersistentValue(
+      appStateStorageKey,
+      jsonEncode(_starterSnapshot().toJson()),
+    );
+
+    await _pumpWorkspace(tester);
+
+    await tester.tap(find.text('Démarrer avec Tarek'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Passer'), findsOneWidget);
+    expect(find.text('Précédent'), findsOneWidget);
+    expect(find.text('Suivant'), findsOneWidget);
+    expect(find.text('Faire maintenant'), findsOneWidget);
   });
 
   testWidgets('shows onboarding on first launch only when setup is needed', (
@@ -181,6 +204,7 @@ void main() {
         supabaseAnonKey: '',
         authBypassEnabled: true,
         cloudPilotEnabled: true,
+        signupMode: SignupMode.public,
       ),
     );
 
@@ -211,12 +235,15 @@ void main() {
         supabaseAnonKey: '',
         authBypassEnabled: true,
         cloudPilotEnabled: true,
+        signupMode: SignupMode.public,
       ),
     );
     await tester.tap(find.byTooltip('Synchroniser maintenant'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Mode local: synchronisation cloud désactivée.'),
+      find.text(
+        'Mode local: synchronisation cloud désactivée. Les données locales sont conservées.',
+      ),
       findsOneWidget,
     );
   });
@@ -240,11 +267,65 @@ void main() {
         supabaseAnonKey: '',
         authBypassEnabled: false,
         cloudPilotEnabled: true,
+        signupMode: SignupMode.public,
       ),
     );
     await tester.tap(find.byTooltip('Synchroniser maintenant'));
     await tester.pumpAndSettle();
-    expect(find.text('Connexion cloud non configurée.'), findsOneWidget);
+    expect(
+      find.text(
+        'Connexion cloud non configurée. Les données locales sont conservées.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('documents page shows Bon de sortie badge and filter', (
+    tester,
+  ) async {
+    _setDesktopViewport(tester);
+    writePersistentValue(
+      appStateStorageKey,
+      jsonEncode(_snapshotWithBonSortie().toJson()),
+    );
+
+    await _pumpWorkspace(tester);
+    await _openSecondarySection(tester, 'Documents');
+
+    expect(find.text('Bon de sortie'), findsWidgets);
+    expect(find.text('Retour produits'), findsWidgets);
+    expect(find.text('Clôturer'), findsWidgets);
+  });
+
+  testWidgets('sale success page shows PDF and new sale actions', (
+    tester,
+  ) async {
+    _setDesktopViewport(tester);
+    writePersistentValue(
+      appStateStorageKey,
+      jsonEncode(_snapshotReadyForSale().toJson()),
+    );
+
+    await _pumpWorkspace(tester);
+    await tester.tap(find.text('Vendre').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vente rapide'), findsWidgets);
+
+    final addToSale = find.text('Ajouter à la vente', skipOffstage: false);
+    await tester.ensureVisible(addToSale.first);
+    await tester.tap(addToSale.first);
+    await tester.pumpAndSettle();
+    final validateSale = find.text('Valider la vente', skipOffstage: false);
+    await tester.ensureVisible(validateSale.first);
+    await tester.tap(validateSale.first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Vente validée'), findsWidgets);
+    expect(find.text('Encaisser paiement'), findsOneWidget);
+    expect(find.text('Télécharger PDF'), findsOneWidget);
+    expect(find.text('Voir document'), findsOneWidget);
+    expect(find.text('Nouvelle vente'), findsOneWidget);
   });
 }
 
@@ -425,6 +506,132 @@ AppSnapshot _snapshotWithDraftInvoice() {
     ],
     movements: const [],
     sequences: const {DocumentType.facture: 2},
+    auditEvents: const [],
+  );
+}
+
+AppSnapshot _snapshotReadyForSale() {
+  return AppSnapshot(
+    company: const CompanyProfile(
+      name: 'Trace Ultra Store',
+      taxId: '1234567/A/M/000',
+      address: 'Avenue Habib Bourguiba',
+      city: 'Tunis',
+      phone: '+216 20 000 000',
+      email: 'contact@trace.tn',
+      logoSource: '',
+      invoiceFooter: 'Merci.',
+    ),
+    warehouses: const [
+      Warehouse(id: 'main', name: 'Dépôt principal', city: 'Tunis'),
+    ],
+    categories: const [Category(id: 'cat-default', name: 'Électronique')],
+    products: const [
+      Product(
+        id: 'p1',
+        name: 'TV Samsung',
+        sku: 'TV-SAM',
+        category: 'Électronique',
+        purchaseHt: 800,
+        saleHt: 1000,
+        tvaRate: TvaRate.rate19,
+        minStock: 2,
+        serialTracked: false,
+        stockByWarehouse: {'main': 3},
+        serialsByWarehouse: {'main': []},
+        imageUrl: '',
+      ),
+    ],
+    partners: const [
+      Partner(
+        id: 'c1',
+        type: PartnerType.client,
+        name: 'Client Test',
+        taxId: '',
+        address: 'Tunis',
+        phone: '+216 20 000 000',
+        email: 'client@example.tn',
+      ),
+    ],
+    documents: const [],
+    movements: const [],
+    sequences: const {DocumentType.facture: 1},
+    auditEvents: const [],
+  );
+}
+
+AppSnapshot _snapshotWithBonSortie() {
+  const product = Product(
+    id: 'p1',
+    name: 'TV Samsung',
+    sku: 'TV-SAM',
+    category: 'Électronique',
+    purchaseHt: 800,
+    saleHt: 1000,
+    tvaRate: TvaRate.rate19,
+    minStock: 2,
+    serialTracked: false,
+    stockByWarehouse: {'main': 2, 'truck-1': 1},
+    serialsByWarehouse: {'main': [], 'truck-1': []},
+    imageUrl: '',
+  );
+  return AppSnapshot(
+    company: const CompanyProfile(
+      name: 'Trace Ultra Store',
+      taxId: '1234567/A/M/000',
+      address: 'Avenue Habib Bourguiba',
+      city: 'Tunis',
+      phone: '+216 20 000 000',
+      email: 'contact@trace.tn',
+      logoSource: '',
+      invoiceFooter: 'Merci.',
+    ),
+    warehouses: const [
+      Warehouse(id: 'main', name: 'Dépôt principal', city: 'Tunis'),
+      Warehouse(
+        id: 'truck-1',
+        name: 'Camion 1',
+        city: 'Tunis',
+        code: 'CAM-1',
+        type: 'mobile',
+      ),
+    ],
+    categories: const [Category(id: 'cat-default', name: 'Électronique')],
+    products: const [product],
+    partners: const [],
+    documents: [
+      BusinessDocument(
+        id: 'bs1',
+        type: DocumentType.bonSortie,
+        number: 'BS-2026-0001',
+        status: DocumentStatus.validated,
+        partnerId: 'system-mobile',
+        partnerName: 'Chargement Camion',
+        partnerTaxId: '',
+        partnerAddress: '',
+        date: DateTime(2026, 4, 23),
+        lines: const [
+          DocumentLine(
+            productId: 'p1',
+            label: 'TV Samsung',
+            sku: 'TV-SAM',
+            quantity: 1,
+            unitHt: 1000,
+            tvaRate: TvaRate.rate19,
+          ),
+        ],
+        warehouseId: 'main',
+        stockApplied: true,
+        metadata: const {
+          'targetWarehouseId': 'truck-1',
+          'driverName': 'Tarek',
+          'vehiclePlate': '123 TU 456',
+          'destination': 'Tournée Tunis',
+        },
+      ),
+    ],
+    movements: const [],
+    sequences: const {DocumentType.bonSortie: 2},
     auditEvents: const [],
   );
 }

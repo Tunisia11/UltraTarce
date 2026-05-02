@@ -83,4 +83,39 @@ void main() {
       await repo.close();
     },
   );
+
+  test('sendPasswordReset emits safe success message', () async {
+    final repo = FakeAuthRepository();
+    final cubit = AuthCubit(repo);
+
+    await cubit.sendPasswordReset('user@example.com');
+
+    expect(cubit.state, isA<AuthUnauthenticated>());
+    expect(
+      (cubit.state as AuthUnauthenticated).message,
+      'Si un compte existe avec cet email, un lien de réinitialisation sera envoyé.',
+    );
+    await cubit.close();
+    await repo.close();
+  });
+
+  test('submitTrialRequest emits success message', () async {
+    final repo = FakeAuthRepository();
+    final cubit = AuthCubit(repo);
+
+    final success = await cubit.submitTrialRequest(
+      fullName: 'Test User',
+      email: 'test@example.com',
+      companyName: 'Test Co',
+    );
+
+    expect(success, isTrue);
+    expect(cubit.state, isA<AuthUnauthenticated>());
+    expect(
+      (cubit.state as AuthUnauthenticated).message,
+      'Demande envoyée. Nous vous contacterons rapidement.',
+    );
+    await cubit.close();
+    await repo.close();
+  });
 }

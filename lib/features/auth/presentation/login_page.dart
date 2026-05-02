@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../app/app_colors.dart';
+import '../../../domain/app_enums.dart';
 import '../application/auth_cubit.dart';
 import '../application/auth_state.dart';
 
@@ -10,12 +11,14 @@ class LoginPage extends StatefulWidget {
     super.key,
     required this.onShowRegister,
     required this.onShowForgotPassword,
+    this.signupMode = SignupMode.public,
     this.message,
     this.enabled = true,
   });
 
   final VoidCallback onShowRegister;
   final VoidCallback onShowForgotPassword;
+  final SignupMode signupMode;
   final String? message;
   final bool enabled;
 
@@ -73,12 +76,18 @@ class _LoginPageState extends State<LoginPage> {
           ),
           TextButton(
             onPressed: loading ? null : widget.onShowRegister,
-            child: const Text('Créer un compte'),
+            child: Text(_registerButtonLabel),
           ),
         ],
       ),
     );
   }
+
+  String get _registerButtonLabel => switch (widget.signupMode) {
+    SignupMode.public => 'Créer un compte',
+    SignupMode.trialRequest => 'Demander un essai',
+    SignupMode.inviteOnly => 'Accès sur invitation',
+  };
 }
 
 class AuthScaffold extends StatelessWidget {
@@ -96,38 +105,43 @@ class AuthScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(title, style: Theme.of(context).textTheme.headlineMedium),
-                if (message != null && message!.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: .08),
-                      border: Border.all(
-                        color: AppColors.warning.withValues(alpha: .25),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        message!,
-                        style: const TextStyle(color: AppColors.warning),
-                      ),
-                    ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
+                  if (message != null && message!.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: .08),
+                        border: Border.all(
+                          color: AppColors.warning.withValues(alpha: .25),
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Text(
+                          message!,
+                          style: const TextStyle(color: AppColors.warning),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 22),
+                  child,
                 ],
-                const SizedBox(height: 22),
-                child,
-              ],
+              ),
             ),
           ),
         ),

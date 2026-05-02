@@ -61,6 +61,15 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> sendPasswordReset(String email) async {}
 
   @override
+  Future<void> submitTrialRequest({
+    required String fullName,
+    required String email,
+    required String companyName,
+    String? phone,
+    String? message,
+  }) async {}
+
+  @override
   Future<void> logout() async {
     loggedOut = true;
     initialUser = null;

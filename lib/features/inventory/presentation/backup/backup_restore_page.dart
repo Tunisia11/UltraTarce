@@ -210,6 +210,15 @@ extension _InventoryBackupRestorePage on _InventoryHomePageState {
                 icon: const Icon(Icons.upload_file_outlined),
                 label: const Text('Restaurer une sauvegarde'),
               ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _onboardingCubit.resetGuidanceForTesting();
+                  _startFirstSuccessGuide();
+                  _updateState(() => _section = Section.dashboard);
+                },
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: const Text('Relancer le guide'),
+              ),
             ],
           ),
         ],

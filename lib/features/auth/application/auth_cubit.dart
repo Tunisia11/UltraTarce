@@ -84,11 +84,40 @@ class AuthCubit extends Cubit<AuthState> {
       await _authRepository.sendPasswordReset(email);
       emit(
         const AuthUnauthenticated(
-          message: 'Lien de réinitialisation envoyé si le compte existe.',
+          message:
+              'Si un compte existe avec cet email, un lien de réinitialisation sera envoyé.',
         ),
       );
     } catch (error) {
       emit(AuthFailure(_friendlyMessage(error)));
+    }
+  }
+
+  Future<bool> submitTrialRequest({
+    required String fullName,
+    required String email,
+    required String companyName,
+    String? phone,
+    String? message,
+  }) async {
+    emit(const AuthLoading());
+    try {
+      await _authRepository.submitTrialRequest(
+        fullName: fullName,
+        email: email,
+        companyName: companyName,
+        phone: phone,
+        message: message,
+      );
+      emit(
+        const AuthUnauthenticated(
+          message: 'Demande envoyée. Nous vous contacterons rapidement.',
+        ),
+      );
+      return true;
+    } catch (error) {
+      emit(AuthFailure(_friendlyMessage(error)));
+      return false;
     }
   }
 

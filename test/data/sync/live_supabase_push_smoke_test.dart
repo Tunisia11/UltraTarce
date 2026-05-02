@@ -12,6 +12,7 @@ import 'package:ultra_trace/data/sync/sync_outbox_service.dart';
 import 'package:ultra_trace/data/sync/sync_push_service.dart';
 import 'package:ultra_trace/data/sync/sync_remote_writer.dart';
 import 'package:ultra_trace/data/sync/sync_metadata_repository.dart';
+import 'package:ultra_trace/domain/app_enums.dart';
 
 void main() {
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -86,6 +87,7 @@ void main() {
               supabaseAnonKey: supabaseAnonKey,
               authBypassEnabled: false,
               cloudPilotEnabled: true,
+              signupMode: SignupMode.public,
             ),
             clientOverride: client,
           ),

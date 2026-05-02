@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../../../app/app_colors.dart';
 import '../sync_conflict_models.dart';
 import '../sync_conflict_repository.dart';
 import '../sync_conflict_service.dart';
@@ -23,6 +24,7 @@ class SyncConflictsPage extends StatelessWidget {
         title: const Text('Conflits de synchronisation'),
         elevation: 0,
       ),
+      backgroundColor: AppColors.background,
       body: _SyncConflictsView(
         conflictRepository: conflictRepository,
         conflictService: conflictService,
@@ -141,9 +143,13 @@ class _SyncConflictsViewState extends State<_SyncConflictsView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const Icon(
+                  Icons.info_outline,
+                  size: 48,
+                  color: AppColors.warning,
+                ),
                 const SizedBox(height: 16),
-                Text('Erreur: ${snapshot.error}'),
+                Text('À vérifier: ${snapshot.error}'),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: _refresh,
@@ -156,21 +162,45 @@ class _SyncConflictsViewState extends State<_SyncConflictsView> {
         final conflicts = snapshot.data ?? [];
         if (conflicts.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 64,
-                  color: Colors.green.withValues(alpha: 0.5),
+            child: Container(
+              width: 460,
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLowest,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: .22),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Tout est en ordre',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const Text('Aucun conflit de synchronisation détecté.'),
-              ],
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.ink.withValues(alpha: .04),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 56,
+                    color: AppColors.success,
+                  ),
+                  SizedBox(height: 14),
+                  Text(
+                    'Aucun conflit. Vos données sont propres.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+                  ),
+                  SizedBox(height: 6),
+                  Text(
+                    'Les données locales sont conservées et prêtes à synchroniser.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.muted),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -180,9 +210,13 @@ class _SyncConflictsViewState extends State<_SyncConflictsView> {
           itemBuilder: (context, index) {
             final conflict = conflicts[index];
             return Card(
-              elevation: 4,
+              color: AppColors.surfaceLowest,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: AppColors.border.withValues(alpha: .22),
+                ),
               ),
               margin: const EdgeInsets.only(bottom: 16),
               clipBehavior: Clip.antiAlias,
@@ -219,13 +253,13 @@ class _SyncConflictsViewState extends State<_SyncConflictsView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _PayloadSection(
-                          title: 'Données locales',
+                          title: 'Version locale',
                           json: conflict.localPayloadJson,
                           entityType: conflict.entityType,
                         ),
                         const SizedBox(height: 16),
                         _PayloadSection(
-                          title: 'Données distantes (Cloud)',
+                          title: 'Version cloud',
                           json: conflict.remotePayloadJson,
                           entityType: conflict.entityType,
                         ),
@@ -260,7 +294,7 @@ class _SyncConflictsViewState extends State<_SyncConflictsView> {
                                 Icons.cloud_download_outlined,
                                 size: 18,
                               ),
-                              label: const Text('Garder Cloud'),
+                              label: const Text('Garder cloud'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.blue,
                               ),
@@ -272,7 +306,7 @@ class _SyncConflictsViewState extends State<_SyncConflictsView> {
                                 'keep_local',
                               ),
                               icon: const Icon(Icons.save_outlined, size: 18),
-                              label: const Text('Garder Local'),
+                              label: const Text('Garder local'),
                             ),
                           ],
                         ),

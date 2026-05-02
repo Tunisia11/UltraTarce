@@ -56,6 +56,12 @@ void main() {
       ),
     );
 
+    expect(find.text('Image produit'), findsOneWidget);
+    expect(find.text('Informations générales'), findsOneWidget);
+    expect(find.text('Prix et taxes'), findsOneWidget);
+    expect(find.text('Stock et inventaire'), findsOneWidget);
+    expect(find.text('Détails supplémentaires'), findsOneWidget);
+    expect(find.textContaining('PNG, JPG ou WEBP — max 1 Mo'), findsOneWidget);
     expect(find.text('Stock initial'), findsOneWidget);
     expect(find.text('Dépôt de départ'), findsOneWidget);
   });
@@ -90,6 +96,11 @@ void main() {
       expect(find.text('Stock initial'), findsNothing);
       expect(find.text('Stock actuel'), findsOneWidget);
       expect(find.text('Stock Total'), findsOneWidget);
+      expect(find.text('Ajuster stock'), findsOneWidget);
+      expect(find.text('Entrée stock'), findsOneWidget);
+      expect(find.text('Sortie stock'), findsOneWidget);
+      expect(find.text('Transférer'), findsOneWidget);
+      expect(find.text('Historique stock'), findsOneWidget);
       expect(find.text('10').first, findsOneWidget);
     },
   );
@@ -422,9 +433,7 @@ void main() {
       ),
     );
 
-    await tester.ensureVisible(
-      find.widgetWithText(OutlinedButton, 'Historique stock'),
-    );
+    await tester.ensureVisible(find.text('Historique stock').first);
     expect(find.text('+5 · Vente test'), findsOneWidget);
     expect(find.textContaining('Doc: FAC-2026-0001'), findsOneWidget);
   });

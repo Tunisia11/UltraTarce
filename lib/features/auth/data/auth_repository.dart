@@ -31,6 +31,14 @@ abstract class AuthRepository {
 
   Future<void> sendPasswordReset(String email);
 
+  Future<void> submitTrialRequest({
+    required String fullName,
+    required String email,
+    required String companyName,
+    String? phone,
+    String? message,
+  });
+
   Future<void> logout();
 }
 
@@ -104,15 +112,24 @@ class SupabaseAuthRepository implements AuthRepository {
       _devAuthController.add(_devUser);
       return _devUser!;
     }
-    final response = await _requireClient().auth.signInWithPassword(
-      email: email.trim(),
-      password: password,
-    );
-    final user = _mapUser(response.user);
-    if (user == null) {
-      throw const AuthRepositoryException('Connexion impossible.');
+    try {
+      final response = await _requireClient().auth.signInWithPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final user = _mapUser(response.user);
+      if (user == null) {
+        throw const AuthRepositoryException('Connexion impossible.');
+      }
+      return user;
+    } on AuthException catch (e) {
+      throw _handleAuthException(e, fallback: 'Connexion impossible.');
+    } catch (e) {
+      debugPrint('Unknown exception during login: $e');
+      throw const AuthRepositoryException(
+        'Erreur de connexion. Vérifiez votre réseau.',
+      );
     }
-    return user;
   }
 
   @override
@@ -156,50 +173,105 @@ class SupabaseAuthRepository implements AuthRepository {
       }
       return user;
     } on AuthException catch (e) {
-      // Log for dev info
-      debugPrint('Supabase AuthException: ${e.statusCode} ${e.message}');
-
-      final msg = e.message.toLowerCase();
-      if (e.statusCode == '429' || msg.contains('rate limit')) {
-        throw const AuthRepositoryException(
-          'Trop de tentatives. Attendez quelques minutes puis réessayez.',
-        );
-      }
-      if (msg.contains('already registered') || e.statusCode == '422') {
-        throw const AuthRepositoryException(
-          'Cet email est déjà utilisé. Connectez-vous ou utilisez un autre email.',
-        );
-      }
-      if (msg.contains('password')) {
-        throw const AuthRepositoryException(
-          'Mot de passe invalide. Utilisez au moins 6 caractères.',
-        );
-      }
-      if (msg.contains('invalid email')) {
-        throw const AuthRepositoryException('Email invalide.');
-      }
-      throw const AuthRepositoryException(
-        'Création du compte impossible. Vérifiez les informations et réessayez.',
-      );
-    } on PostgrestException catch (e) {
-      debugPrint(
-        'Supabase PostgrestException: ${e.message} ${e.details} ${e.hint}',
-      );
-      throw const AuthRepositoryException(
-        'Création du compte impossible. Vérifiez les informations et réessayez.',
-      );
+      throw _handleAuthException(e, fallback: 'Création du compte impossible.');
     } catch (e) {
       debugPrint('Unknown exception during signup: $e');
       throw const AuthRepositoryException(
-        'Création du compte impossible. Vérifiez les informations et réessayez.',
+        'Création du compte impossible. Vérifiez votre réseau.',
       );
     }
   }
 
   @override
+  Future<void> submitTrialRequest({
+    required String fullName,
+    required String email,
+    required String companyName,
+    String? phone,
+    String? message,
+  }) async {
+    if (_config.authBypassEnabled) return;
+
+    try {
+      await _requireClient().from('trial_requests').insert({
+        'full_name': fullName.trim(),
+        'email': email.trim(),
+        'company_name': companyName.trim(),
+        'phone': phone?.trim(),
+        'message': message?.trim(),
+        'status': 'new',
+        'source': 'trace_ultra',
+      });
+    } catch (e) {
+      debugPrint('Error submitting trial request: $e');
+      throw const AuthRepositoryException(
+        'Envoi de la demande impossible. Vérifiez votre connexion.',
+      );
+    }
+  }
+
+  AuthRepositoryException _handleAuthException(
+    AuthException e, {
+    required String fallback,
+  }) {
+    debugPrint('Supabase AuthException: ${e.statusCode} ${e.message}');
+    final msg = e.message.toLowerCase();
+
+    if (e.statusCode == '429' || msg.contains('rate limit')) {
+      return const AuthRepositoryException(
+        'Trop de tentatives. Réessayez dans quelques minutes.',
+      );
+    }
+    if (msg.contains('email_send_rate_limit') ||
+        msg.contains('email rate limit')) {
+      return const AuthRepositoryException(
+        'Limite d’envoi email atteinte. Réessayez plus tard ou contactez Virex.',
+      );
+    }
+    if (msg.contains('already registered') ||
+        msg.contains('email_exists') ||
+        msg.contains('already exists')) {
+      return const AuthRepositoryException(
+        'Un compte existe déjà avec cet email.',
+      );
+    }
+    if (msg.contains('invalid login credentials') ||
+        msg.contains('invalid credentials')) {
+      return const AuthRepositoryException('Email ou mot de passe incorrect.');
+    }
+    if (msg.contains('weak_password') ||
+        (msg.contains('password') && msg.contains('short'))) {
+      return const AuthRepositoryException(
+        'Mot de passe trop faible (6 caractères min).',
+      );
+    }
+    if (msg.contains('invalid email')) {
+      return const AuthRepositoryException('Email invalide.');
+    }
+    if (msg.contains('email not confirmed')) {
+      return const AuthRepositoryException('Email non confirmé.');
+    }
+    if (msg.contains('refresh_token_not_found') ||
+        msg.contains('invalid refresh token')) {
+      return const AuthRepositoryException(
+        'Session expirée. Veuillez vous reconnecter.',
+      );
+    }
+
+    return AuthRepositoryException(fallback);
+  }
+
+  @override
   Future<void> sendPasswordReset(String email) async {
     if (_config.authBypassEnabled) return;
-    await _requireClient().auth.resetPasswordForEmail(email.trim());
+    try {
+      await _requireClient().auth.resetPasswordForEmail(email.trim());
+    } on AuthException catch (e) {
+      throw _handleAuthException(e, fallback: 'Réinitialisation impossible.');
+    } catch (e) {
+      debugPrint('Error sending password reset: $e');
+      throw const AuthRepositoryException('Erreur. Vérifiez votre réseau.');
+    }
   }
 
   @override

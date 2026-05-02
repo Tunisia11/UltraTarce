@@ -1,13 +1,16 @@
 part of '../inventory_shell_page.dart';
 
 extension _InventoryWorkflows on _InventoryHomePageState {
-  Future<void> _showWarehouseDialog([Warehouse? warehouse]) async {
+  Future<void> _showWarehouseDialog([
+    Warehouse? warehouse,
+    String? initialType,
+  ]) async {
     final name = TextEditingController(text: warehouse?.name ?? '');
     final code = TextEditingController(text: warehouse?.code ?? '');
     final city = TextEditingController(text: warehouse?.city ?? '');
     final address = TextEditingController(text: warehouse?.address ?? '');
     var active = warehouse?.active ?? true;
-    var type = warehouse?.type ?? 'depot';
+    var type = warehouse?.type ?? initialType ?? 'depot';
 
     await showDialog<void>(
       context: context,
@@ -34,11 +37,11 @@ extension _InventoryWorkflows on _InventoryHomePageState {
                     items: const [
                       DropdownMenuItem(
                         value: 'depot',
-                        child: Text('🏠 Dépôt fixe'),
+                        child: Text('Dépôt fixe'),
                       ),
                       DropdownMenuItem(
                         value: 'mobile',
-                        child: Text('🚚 Unité mobile (Camion)'),
+                        child: Text('Unité mobile (Camion)'),
                       ),
                     ],
                     onChanged: (value) =>

@@ -28,7 +28,7 @@ extension _InventorySalesPage on _InventoryHomePageState {
           _buildHeader(
             title: 'Faire une vente',
             subtitle:
-                'La vente est terminée. Vous pouvez encaisser, envoyer ou repartir sur une nouvelle vente.',
+                'Vente validée. Vous pouvez encaisser, télécharger le PDF ou repartir sur une nouvelle vente.',
           ),
           _buildSaleSuccessPanel(successDocument),
         ],
@@ -104,6 +104,8 @@ extension _InventorySalesPage on _InventoryHomePageState {
     return Panel(
       key: _saleSuccessKey,
       title: 'Vente validée',
+      icon: Icons.check_circle_outline,
+      subtitle: 'Le document est prêt pour paiement, PDF ou consultation.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -185,7 +187,9 @@ extension _InventorySalesPage on _InventoryHomePageState {
         : 'Mettre à jour le brouillon';
 
     return Panel(
-      title: 'À encaisser',
+      title: 'Résumé vente',
+      icon: Icons.receipt_long_outlined,
+      subtitle: 'Total TTC, net à payer et validation du document.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -220,7 +224,7 @@ extension _InventorySalesPage on _InventoryHomePageState {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Net à payer',
+                  'Total TTC / Net à payer',
                   style: TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(height: 4),
@@ -255,7 +259,7 @@ extension _InventorySalesPage on _InventoryHomePageState {
             title: hasLines ? 'Prêt' : 'Ajoutez un produit',
             message: hasLines
                 ? 'Validation, stock et document seront faits en une seule action.'
-                : 'Cherchez un produit à gauche, choisissez la quantité, puis ajoutez-le.',
+                : 'Ajoutez au moins un produit pour valider la vente.',
             color: hasLines ? AppColors.primary : AppColors.muted,
           ),
           const SizedBox(height: 14),
@@ -301,6 +305,8 @@ extension _InventorySalesPage on _InventoryHomePageState {
       onKeyEvent: _handleSalesKey,
       child: Panel(
         title: 'Vente rapide',
+        subtitle: 'Recherchez un produit, ajustez la quantité, puis validez.',
+        icon: Icons.point_of_sale_outlined,
         trailing: const SmallChip(label: 'Entrée pour ajouter'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,7 +396,7 @@ extension _InventorySalesPage on _InventoryHomePageState {
                             value: warehouse.id,
                             child: Text(
                               warehouse.type == 'mobile'
-                                  ? '🚚 ${warehouse.name}'
+                                  ? 'Camion · ${warehouse.name}'
                                   : warehouse.name,
                             ),
                           ),
@@ -461,7 +467,8 @@ extension _InventorySalesPage on _InventoryHomePageState {
                             },
                             decoration: InputDecoration(
                               labelText: 'Rechercher un produit',
-                              hintText: 'Nom, SKU ou code-barres',
+                              hintText:
+                                  'Rechercher un produit par nom, code ou SKU',
                               helperText:
                                   'Choisissez un produit, puis appuyez sur Entrée pour l’ajouter.',
                               prefixIcon: const Icon(Icons.search),
@@ -759,6 +766,7 @@ extension _InventorySalesPage on _InventoryHomePageState {
           SmallChip(label: _selectedProduct.sku),
           SmallChip(label: 'Quantité ${_selectedSalesQuantity()}'),
           SmallChip(label: '${formatMoney(_selectedProduct.saleTtc)} TTC'),
+          SmallChip(label: 'TVA ${_selectedProduct.tvaRate.label}'),
           SmallChip(
             label: _selectedProduct.stockTracked
                 ? 'Stock actuel $stock'

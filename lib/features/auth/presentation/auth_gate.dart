@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../app/app_config.dart';
+import '../../../domain/app_enums.dart';
 import '../application/auth_cubit.dart';
 import '../application/auth_state.dart';
 import '../application/tenant_cubit.dart';
@@ -13,6 +14,7 @@ import 'forgot_password_page.dart';
 import 'login_page.dart';
 import 'register_page.dart';
 import 'tenant_selection_page.dart';
+import 'trial_request_page.dart';
 import 'user_menu.dart';
 import '../../subscription/data/subscription_status_repository.dart';
 import '../../subscription/presentation/subscription_gate.dart';
@@ -117,16 +119,29 @@ class _AuthGateState extends State<AuthGate> {
       _AuthPageMode.login => LoginPage(
         message: message ?? _config.configurationWarning,
         enabled: enabled && _config.configurationWarning == null,
+        signupMode: _config.signupMode,
         onShowRegister: () => setState(() => _mode = _AuthPageMode.register),
         onShowForgotPassword: () =>
             setState(() => _mode = _AuthPageMode.forgotPassword),
       ),
-      _AuthPageMode.register => RegisterPage(
+      _AuthPageMode.register => _buildRegisterPage(message, enabled),
+      _AuthPageMode.forgotPassword => ForgotPasswordPage(
+        onShowLogin: () => setState(() => _mode = _AuthPageMode.login),
+      ),
+    };
+  }
+
+  Widget _buildRegisterPage(String? message, bool enabled) {
+    return switch (_config.signupMode) {
+      SignupMode.public => RegisterPage(
         message: message,
         enabled: enabled && _config.configurationWarning == null,
         onShowLogin: () => setState(() => _mode = _AuthPageMode.login),
       ),
-      _AuthPageMode.forgotPassword => ForgotPasswordPage(
+      SignupMode.trialRequest => TrialRequestPage(
+        onShowLogin: () => setState(() => _mode = _AuthPageMode.login),
+      ),
+      SignupMode.inviteOnly => InviteOnlyPage(
         onShowLogin: () => setState(() => _mode = _AuthPageMode.login),
       ),
     };

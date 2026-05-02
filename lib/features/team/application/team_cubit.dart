@@ -104,14 +104,23 @@ class TeamCubit extends Cubit<TeamState> {
     }
   }
 
-  /// Accept a pending invite.
   Future<void> acceptInvite(String inviteToken) async {
     emit(const TeamLoading());
     try {
       final tenantId = await _repository.acceptInvite(inviteToken);
       emit(InviteAccepted(tenantId));
     } catch (e) {
-      emit(TeamError('Erreur acceptation: $e'));
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('expired') || msg.contains('expirée')) {
+        emit(const TeamError('Invitation expirée.'));
+      } else if (msg.contains('email mismatch') ||
+          msg.contains('wrong email')) {
+        emit(
+          const TeamError('Cette invitation ne correspond pas à votre email.'),
+        );
+      } else {
+        emit(TeamError('Erreur acceptation: $e'));
+      }
     }
   }
 }

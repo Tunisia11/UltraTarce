@@ -32,7 +32,8 @@ extension _InventoryProductsPage on _InventoryHomePageState {
       children: [
         _buildHeader(
           title: 'Produits',
-          subtitle: 'Catalogue simple: prix, stock et articles à surveiller.',
+          subtitle:
+              'Catalogue clair pour vendre vite: prix, images, stock et articles à surveiller.',
           actions: [
             ElevatedButton.icon(
               key: _productCreateActionKey,
@@ -54,6 +55,8 @@ extension _InventoryProductsPage on _InventoryHomePageState {
         ),
         Panel(
           title: 'Catalogue',
+          icon: Icons.inventory_2_outlined,
+          subtitle: 'Recherchez par nom, code, SKU ou marque.',
           trailing: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -79,6 +82,7 @@ extension _InventoryProductsPage on _InventoryHomePageState {
                       controller: _productFilterController,
                       decoration: const InputDecoration(
                         labelText: 'Chercher un produit',
+                        hintText: 'Nom, SKU, code-barres ou marque',
                         prefixIcon: Icon(Icons.search),
                       ),
                       onChanged: (value) =>
@@ -168,9 +172,11 @@ extension _InventoryProductsPage on _InventoryHomePageState {
               if (filteredProducts.isEmpty)
                 EmptyState(
                   text: _products.isEmpty
-                      ? 'Aucun produit. Ajoutez votre premier article pour commencer à vendre.'
+                      ? 'Ajoutez votre premier produit pour commencer à vendre.'
                       : 'Aucun produit ne correspond à cette recherche.',
                   icon: Icons.inventory_2_outlined,
+                  actionLabel: _products.isEmpty ? 'Ajouter produit' : null,
+                  onAction: _products.isEmpty ? () => _openProductForm() : null,
                 )
               else
                 LayoutBuilder(

@@ -1,9 +1,12 @@
+import '../domain/app_enums.dart';
+
 class AppConfig {
   const AppConfig({
     required this.supabaseUrl,
     required this.supabaseAnonKey,
     required this.authBypassEnabled,
     required this.cloudPilotEnabled,
+    required this.signupMode,
   });
 
   factory AppConfig.fromEnvironment({bool? authBypassOverride}) {
@@ -15,7 +18,21 @@ class AppConfig {
       authBypassEnabled:
           authBypassOverride ?? const bool.fromEnvironment('TRACE_AUTH_BYPASS'),
       cloudPilotEnabled: const bool.fromEnvironment('TRACE_CLOUD_PILOT'),
+      signupMode: _parseSignupMode(
+        const String.fromEnvironment(
+          'TRACE_SIGNUP_MODE',
+          defaultValue: 'trial_request',
+        ),
+      ),
     );
+  }
+
+  static SignupMode _parseSignupMode(String value) {
+    return switch (value.toLowerCase()) {
+      'public' => SignupMode.public,
+      'invite_only' => SignupMode.inviteOnly,
+      _ => SignupMode.trialRequest,
+    };
   }
 
   factory AppConfig.devBypass() {
@@ -24,6 +41,7 @@ class AppConfig {
       supabaseAnonKey: '',
       authBypassEnabled: true,
       cloudPilotEnabled: false,
+      signupMode: SignupMode.public,
     );
   }
 
@@ -31,6 +49,7 @@ class AppConfig {
   final String supabaseAnonKey;
   final bool authBypassEnabled;
   final bool cloudPilotEnabled;
+  final SignupMode signupMode;
 
   bool get hasSupabaseConfig =>
       supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;

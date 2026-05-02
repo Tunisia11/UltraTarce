@@ -230,6 +230,8 @@ extension PaymentStatusDetails on PaymentStatus {
   }
 }
 
+enum SignupMode { public, trialRequest, inviteOnly }
+
 T enumFromName<T extends Enum>(List<T> values, Object? name, T fallback) {
   for (final value in values) {
     if (value.name == name) return value;
