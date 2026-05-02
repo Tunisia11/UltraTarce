@@ -87,6 +87,7 @@ import '../widgets/small_chip.dart';
 import '../widgets/square_icon_button.dart';
 import '../widgets/step_pill.dart';
 import '../widgets/total_item.dart';
+import '../../team/presentation/team_page.dart';
 
 part 'navigation/app_side_menu.dart';
 part 'navigation/app_navigation_bar.dart';

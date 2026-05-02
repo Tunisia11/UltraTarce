@@ -415,7 +415,46 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
         return _buildTaxSettings();
       case Section.audit:
         return _buildAudit();
+      case Section.team:
+        return _buildTeamSection();
     }
+  }
+
+  Widget _buildTeamSection() {
+    // Get current user's role from TenantContext
+    final role = _tenantContext.currentRole;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildHeader(
+          title: 'Équipe',
+          subtitle: 'Gérer les membres de votre société',
+        ),
+        const Text(
+          'Utilisez le bouton ci-dessous pour ouvrir la gestion d\'équipe.',
+          style: TextStyle(color: AppColors.muted),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.group),
+          label: const Text('Ouvrir la gestion d\'équipe'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryContainer,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => TeamPage(
+                  tenantId: _tenantContext.selectedTenantId,
+                  currentRole: role,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   Widget _buildHeader({

@@ -50,6 +50,7 @@ extension _InventoryAppNavigationBar on _InventoryHomePageState {
                   Section.suppliers,
                   Section.reports,
                   Section.settings,
+                  Section.team,
                 ])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),

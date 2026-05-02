@@ -182,5 +182,99 @@ Pilot limitations to explain to the client:
 - local Drift remains the source of truth
 - sync is manual push to cloud only
 - no pull sync yet
-- no conflict resolution yet
 - one main device is recommended for the pilot
+
+## Admin Virex Setup
+
+To access the private platform admin dashboard (Phase 8A):
+
+1. Find your auth user id in Supabase Dashboard -> Authentication -> Users.
+2. Run SQL in the Supabase SQL Editor:
+
+```sql
+insert into public.platform_admins (user_id, email, role, status)
+values (
+  '<YOUR_AUTH_USER_ID>',
+  '<YOUR_EMAIL>',
+  'owner',
+  'active'
+)
+on conflict (user_id) do update
+set role = excluded.role,
+    status = excluded.status,
+    updated_at = now();
+```
+
+Then login to the Flutter app again and open the "Admin Virex" menu option.
+
+## Phase 8B — Subscription Status
+
+You can manage client SaaS access from the Virex Admin Dashboard. The system supports the following statuses:
+
+- **trial**: can use (shows a trial ending warning)
+- **active**: can use
+- **overdue**: can use with warning (payment pending)
+- **suspended**: blocked (UI is locked, but local data remains safe)
+- **cancelled**: blocked (UI is locked)
+
+If you need to set tenant status manually via SQL:
+
+```sql
+update public.tenant_subscriptions
+set status = 'suspended',
+    suspended_at = now(),
+    admin_notes = 'Non paiement',
+    updated_at = now()
+where tenant_id = '<TENANT_ID>';
+```
+
+## Phase 8C: Team Management & Invitations
+
+Migration: `20260502100000_tenant_team_invites.sql`
+
+### Tables
+
+- **tenant_invites**: Stores pending/accepted/cancelled invitations with `invite_token`.
+- **tenant_users**: Extended with status constraint (`active`, `invited`, `disabled`).
+
+### RLS Policies
+
+- Tenant owners can create, read, and cancel invites.
+- Invited users can see their own pending invite (by email match).
+- Platform admins can read all invites and team data.
+- No broad DELETE policies exist on either table.
+
+### Invite Flow
+
+1. Owner creates invite via the **Équipe** page → `INSERT into tenant_invites`.
+2. Owner shares the invite code/email with the new user.
+3. New user registers/logs in with matching email.
+4. User opens **Mes invitations** from the user menu.
+5. User accepts → calls `accept_tenant_invite(token)` (SECURITY DEFINER).
+6. The function creates or updates `tenant_users` and marks the invite as accepted.
+
+### Roles & Permissions
+
+| Permission           | owner | manager | cashier | stock_manager | accountant | read_only |
+|---------------------|-------|---------|---------|---------------|------------|-----------|
+| Manage team          | ✅     |         |         |               |            |           |
+| Manage company       | ✅     | ✅       |         |               |            |           |
+| Create sales         | ✅     | ✅       | ✅       |               |            |           |
+| Edit products        | ✅     | ✅       |         | ✅             |            |           |
+| Manage stock         | ✅     | ✅       |         | ✅             |            |           |
+| Validate documents   | ✅     | ✅       |         |               |            |           |
+| View reports         | ✅     | ✅       |         |               | ✅          |           |
+| Export backups       | ✅     | ✅       |         |               | ✅          |           |
+| Record payments      | ✅     | ✅       | ✅       |               |            |           |
+
+### Seats Limit
+
+When `tenant_subscriptions.seats_limit` is set, the team page shows usage
+and prevents inviting new members when the limit is reached.
+
+### Smoke Test
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/007_team_roles_invites.sql
+```
+

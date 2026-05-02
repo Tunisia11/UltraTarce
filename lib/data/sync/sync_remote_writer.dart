@@ -4,7 +4,6 @@ import '../../core/result/app_result.dart';
 import '../remote/remote_errors.dart';
 import '../remote/supabase_client_provider.dart';
 import 'remote_sync_mapper.dart';
-import 'package:ultra_trace/data/remote/remote_tables.dart';
 
 abstract class SyncRemoteWriter {
   Future<AppResult<String>> requireAuthenticatedUserId();

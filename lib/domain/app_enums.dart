@@ -13,6 +13,7 @@ enum Section {
   settings,
   tax,
   audit,
+  team,
 }
 
 extension SectionDetails on Section {
@@ -42,6 +43,8 @@ extension SectionDetails on Section {
         return 'Fiscalité';
       case Section.audit:
         return 'Audit';
+      case Section.team:
+        return 'Équipe';
     }
   }
 
@@ -71,6 +74,8 @@ extension SectionDetails on Section {
         return Icons.receipt_long_outlined;
       case Section.audit:
         return Icons.verified_user_outlined;
+      case Section.team:
+        return Icons.group_outlined;
     }
   }
 }

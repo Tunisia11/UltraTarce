@@ -14,6 +14,8 @@ import 'login_page.dart';
 import 'register_page.dart';
 import 'tenant_selection_page.dart';
 import 'user_menu.dart';
+import '../../subscription/data/subscription_status_repository.dart';
+import '../../subscription/presentation/subscription_gate.dart';
 
 class AuthGate extends StatefulWidget {
   const AuthGate({
@@ -22,12 +24,14 @@ class AuthGate extends StatefulWidget {
     this.config,
     this.authRepository,
     this.tenantRepository,
+    this.subscriptionStatusRepository,
   });
 
   final WidgetBuilder inventoryBuilder;
   final AppConfig? config;
   final AuthRepository? authRepository;
   final TenantRepository? tenantRepository;
+  final SubscriptionStatusRepository? subscriptionStatusRepository;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -85,6 +89,8 @@ class _AuthGateState extends State<AuthGate> {
               return _TenantGate(
                 user: state.user,
                 inventoryBuilder: widget.inventoryBuilder,
+                subscriptionStatusRepository:
+                    widget.subscriptionStatusRepository,
                 onLogout: () => context.read<AuthCubit>().logout(),
               );
             }
@@ -123,11 +129,13 @@ class _TenantGate extends StatelessWidget {
     required this.user,
     required this.inventoryBuilder,
     required this.onLogout,
+    this.subscriptionStatusRepository,
   });
 
   final AppUser user;
   final WidgetBuilder inventoryBuilder;
   final VoidCallback onLogout;
+  final SubscriptionStatusRepository? subscriptionStatusRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +195,11 @@ class _TenantGate extends StatelessWidget {
                 await context.read<TenantCubit>().loadMemberships(user);
               }
             },
-            child: inventoryBuilder(context),
+            child: SubscriptionGate(
+              tenantId: state.selectedTenant.tenantId,
+              repository: subscriptionStatusRepository,
+              child: inventoryBuilder(context),
+            ),
           );
         }
         return const _AuthLoadingView(message: 'Préparation...');

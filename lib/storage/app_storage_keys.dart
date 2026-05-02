@@ -7,4 +7,10 @@ const selectedTenantIdStorageKey = 'trace_ultra.selected_tenant_id.v1';
 const selectedTenantNameStorageKey = 'trace_ultra.selected_tenant_name.v1';
 const selectedUserIdStorageKey = 'trace_ultra.selected_user_id.v1';
 const localWorkspaceModeStorageKey = 'trace_ultra.local_workspace_mode.v1';
+const selectedTenantRoleStorageKey = 'trace_ultra.selected_tenant_role.v1';
 const syncDeviceIdStorageKey = 'trace_ultra.sync_device_id.v1';
+const subscriptionStatusStorageKey = 'trace_ultra.subscription_status.v1';
+const subscriptionPlanStorageKey = 'trace_ultra.subscription_plan.v1';
+const subscriptionTrialEndStorageKey = 'trace_ultra.subscription_trial_end.v1';
+const subscriptionPeriodEndStorageKey =
+    'trace_ultra.subscription_period_end.v1';

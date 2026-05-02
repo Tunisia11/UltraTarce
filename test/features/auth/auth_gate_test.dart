@@ -3,8 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ultra_trace/app/app_config.dart';
 import 'package:ultra_trace/features/auth/data/auth_models.dart';
 import 'package:ultra_trace/features/auth/presentation/auth_gate.dart';
+import 'package:ultra_trace/features/subscription/data/subscription_status_repository.dart';
 
 import 'fake_auth_repositories.dart';
+
+class FakeSubscriptionStatusRepository implements SubscriptionStatusRepository {
+  @override
+  Future<SubscriptionStatusModel?> checkStatus(String tenantId) async {
+    return const SubscriptionStatusModel(status: 'active', plan: 'pilot');
+  }
+}
 
 void main() {
   testWidgets('unauthenticated state shows login', (tester) async {
@@ -14,6 +22,7 @@ void main() {
           config: AppConfig.devBypass(),
           authRepository: FakeAuthRepository(),
           tenantRepository: FakeTenantRepository(const []),
+          subscriptionStatusRepository: FakeSubscriptionStatusRepository(),
           inventoryBuilder: (_) => const Text('Inventaire'),
         ),
       ),
@@ -40,6 +49,7 @@ void main() {
               role: TenantRole.owner,
             ),
           ]),
+          subscriptionStatusRepository: FakeSubscriptionStatusRepository(),
           inventoryBuilder: (_) => const Text('Inventaire prêt'),
         ),
       ),
@@ -69,6 +79,7 @@ void main() {
               role: TenantRole.manager,
             ),
           ]),
+          subscriptionStatusRepository: FakeSubscriptionStatusRepository(),
           inventoryBuilder: (_) => const Text('Inventaire prêt'),
         ),
       ),

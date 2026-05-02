@@ -1,3 +1,4 @@
+import '../features/auth/data/auth_models.dart';
 import '../storage/app_storage.dart';
 import '../storage/app_storage_keys.dart';
 import 'app_config.dart';
@@ -62,6 +63,12 @@ class TenantContext {
   bool get isLegacyLocalWorkspace =>
       selectedTenantId == legacyTenantId ||
       readPersistentValue(localWorkspaceModeStorageKey) == localWorkspaceMode;
+
+  TenantRole get currentRole {
+    final stored = _clean(readPersistentValue(selectedTenantRoleStorageKey));
+    if (stored != null) return tenantRoleFromValue(stored);
+    return TenantRole.owner; // default for local/legacy tenants
+  }
 
   static String? _clean(String? value) {
     final trimmed = value?.trim();

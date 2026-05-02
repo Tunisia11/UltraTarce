@@ -92,6 +92,7 @@ class SupabaseTenantRepository implements TenantRepository {
     await client.from('profiles').upsert({
       'id': user.id,
       'full_name': user.displayName,
+      if (user.email.isNotEmpty) 'email': user.email,
     });
     await client.from('tenant_users').insert({
       'tenant_id': tenantId,
@@ -116,6 +117,7 @@ class SupabaseTenantRepository implements TenantRepository {
     writePersistentValue(selectedTenantIdStorageKey, tenant.tenantId);
     writePersistentValue(selectedTenantNameStorageKey, tenant.tenantName);
     writePersistentValue(selectedUserIdStorageKey, user.id);
+    writePersistentValue(selectedTenantRoleStorageKey, tenant.role.value);
     writePersistentValue(localWorkspaceModeStorageKey, localWorkspaceMode);
   }
 
@@ -129,7 +131,9 @@ class SupabaseTenantRepository implements TenantRepository {
     return TenantMembership(
       tenantId: tenantId,
       tenantName: tenantName?.isNotEmpty == true ? tenantName! : 'Société',
-      role: TenantRole.owner,
+      role: tenantRoleFromValue(
+        readPersistentValue(selectedTenantRoleStorageKey),
+      ),
     );
   }
 
@@ -138,6 +142,7 @@ class SupabaseTenantRepository implements TenantRepository {
     deletePersistentValue(selectedTenantIdStorageKey);
     deletePersistentValue(selectedTenantNameStorageKey);
     deletePersistentValue(selectedUserIdStorageKey);
+    deletePersistentValue(selectedTenantRoleStorageKey);
   }
 
   TenantMembership _membershipFromRow(Map<String, dynamic> row) {

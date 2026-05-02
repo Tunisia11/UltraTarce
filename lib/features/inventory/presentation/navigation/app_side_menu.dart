@@ -134,6 +134,7 @@ extension _InventoryAppSideMenu on _InventoryHomePageState {
       Section.settings,
       Section.tax,
       Section.audit,
+      Section.team,
     ];
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
