@@ -60,8 +60,9 @@ extension _InventorySalesPage on _InventoryHomePageState {
       children: [
         _buildHeader(
           title: 'Faire une vente',
-          subtitle:
-              'Client, produit, quantité, validation. Le reste est automatique.',
+          subtitle: _newDocumentType == DocumentType.bonSortie
+              ? 'Préparez le départ du camion : transférez le stock du dépôt vers le véhicule.'
+              : 'Client, produit, quantité, validation. Le reste est automatique.',
         ),
         if (isDesktop)
           Row(
@@ -370,6 +371,37 @@ extension _InventorySalesPage on _InventoryHomePageState {
                       color: AppColors.primary,
                     ),
                   ),
+                if (_newDocumentType == DocumentType.bonSortie) ...[
+                  const SizedBox(width: 12),
+                  _fieldBox(
+                    width: 280,
+                    child: DropdownButtonFormField<String>(
+                      key: ValueKey('target-$_selectedTargetWarehouseId'),
+                      initialValue: _selectedTargetWarehouseId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Vers le dépôt (Camion)',
+                      ),
+                      items: [
+                        for (final warehouse in _warehouses.where(
+                          (w) => w.active && w.id != _selectedWarehouseId,
+                        ))
+                          DropdownMenuItem(
+                            value: warehouse.id,
+                            child: Text(
+                              warehouse.type == 'mobile'
+                                  ? '🚚 ${warehouse.name}'
+                                  : warehouse.name,
+                            ),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        _updateState(() => _selectedTargetWarehouseId = value);
+                      },
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 10),
@@ -660,6 +692,10 @@ extension _InventorySalesPage on _InventoryHomePageState {
                       DropdownMenuItem(
                         value: DocumentType.devis,
                         child: Text('Proposition / devis'),
+                      ),
+                      DropdownMenuItem(
+                        value: DocumentType.bonSortie,
+                        child: Text('Bon de sortie (Transfert Camion)'),
                       ),
                     ],
                     onChanged: (value) {

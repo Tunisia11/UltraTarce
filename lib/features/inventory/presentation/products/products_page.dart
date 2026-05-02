@@ -36,7 +36,7 @@ extension _InventoryProductsPage on _InventoryHomePageState {
           actions: [
             ElevatedButton.icon(
               key: _productCreateActionKey,
-              onPressed: () => _showProductDialog(),
+              onPressed: () => _openProductForm(),
               icon: const Icon(Icons.add),
               label: const Text('Nouveau produit'),
             ),

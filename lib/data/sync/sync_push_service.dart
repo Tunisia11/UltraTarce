@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 
 import '../../app/tenant_context.dart';
@@ -10,6 +8,9 @@ import 'connectivity_service.dart';
 import 'remote_sync_mapper.dart';
 import 'sync_outbox_repository.dart';
 import 'sync_remote_writer.dart';
+import 'sync_metadata_repository.dart';
+import 'sync_conflict_models.dart';
+import 'dart:convert';
 
 class SyncPushReport {
   const SyncPushReport({
@@ -30,22 +31,25 @@ class SyncPushReport {
 }
 
 class SyncPushService {
-  const SyncPushService({
+  SyncPushService({
     required SyncOutboxRepository outboxRepository,
     required ConnectivityService connectivityService,
     required TenantContext tenantContext,
     required SyncRemoteWriter remoteWriter,
+    required SyncMetadataRepository metadataRepository,
     RemoteSyncMapper mapper = const RemoteSyncMapper(),
   }) : _outboxRepository = outboxRepository,
        _connectivityService = connectivityService,
        _tenantContext = tenantContext,
        _remoteWriter = remoteWriter,
+       _metadataRepository = metadataRepository,
        _mapper = mapper;
 
   final SyncOutboxRepository _outboxRepository;
   final ConnectivityService _connectivityService;
   final TenantContext _tenantContext;
   final SyncRemoteWriter _remoteWriter;
+  final SyncMetadataRepository _metadataRepository;
   final RemoteSyncMapper _mapper;
 
   Future<AppResult<void>> canPush() async {
@@ -222,79 +226,89 @@ class SyncPushService {
         return AppFailure(existsError);
       }
       if (exists.valueOrNull != true) {
-        if (entry.entityType == 'stock_movements') {
-          try {
-            final decoded =
-                jsonDecode(entry.payloadJson) as Map<String, dynamic>;
-            final payload = Map<String, dynamic>.from(
-              decoded['payload'] as Map? ?? {},
+        if (dependency.localId.isNotEmpty) {
+          final parentMutation = await _outboxRepository.findLatestMutation(
+            write.tenantId,
+            dependency.localEntityType,
+            dependency.localId,
+          );
+          if (parentMutation != null) {
+            debugPrint(
+              '[sync] Attempting to repair missing dependency ${dependency.localEntityType}/${dependency.localId} for ${entry.entityType}/${entry.entityId}',
             );
-            final localProduct = payload['productId']?.toString() ?? '';
-            final remoteProduct = RemoteSyncMapper.remoteIdFor(
-              entry.tenantId,
-              'products',
-              localProduct,
+            if (parentMutation.status == 'failed') {
+              await _outboxRepository.markPending(
+                parentMutation.id,
+                tenantId: write.tenantId,
+              );
+            }
+            final parentResult = await pushOne(parentMutation);
+            if (parentResult.isSuccess) {
+              debugPrint(
+                '[sync] Successfully repaired missing dependency ${dependency.localEntityType}/${dependency.localId}. Continuing with ${entry.entityType}/${entry.entityId}.',
+              );
+              continue; // Parent pushed, dependency should exist now!
+            }
+          } else if (dependency.localEntityType == 'warehouses' &&
+              entry.entityType == 'stock_movements') {
+            final error = AppError(
+              code: RemoteErrorCodes.dependencyMissing,
+              message: 'Dépôt introuvable pour ce mouvement de stock.',
             );
-            final productExists =
-                (await _remoteWriter.rowExists(
-                  table: RemoteTables.products,
-                  tenantId: entry.tenantId,
-                  id: remoteProduct,
-                )).valueOrNull ==
-                true;
-
-            final localWarehouse = payload['warehouseId']?.toString() ?? '';
-            final remoteWarehouse = RemoteSyncMapper.remoteIdFor(
-              entry.tenantId,
-              'warehouses',
-              localWarehouse,
-            );
-            final warehouseExists =
-                (await _remoteWriter.rowExists(
-                  table: RemoteTables.warehouses,
-                  tenantId: entry.tenantId,
-                  id: remoteWarehouse,
-                )).valueOrNull ==
-                true;
-
-            final localDocument = payload['sourceDocumentId']?.toString() ?? '';
-            final remoteDocument = localDocument.isNotEmpty
-                ? RemoteSyncMapper.remoteIdFor(
-                    entry.tenantId,
-                    'documents',
-                    localDocument,
-                  )
-                : 'null';
-            final documentExists = localDocument.isNotEmpty
-                ? (await _remoteWriter.rowExists(
-                        table: RemoteTables.documents,
-                        tenantId: entry.tenantId,
-                        id: remoteDocument,
-                      )).valueOrNull ==
-                      true
-                : true;
-
-            debugPrint('''[sync] stock_movements dependency_missing:
-localMovement=${entry.entityId}
-localProduct=$localProduct
-remoteProduct=$remoteProduct
-productExists=$productExists
-localWarehouse=$localWarehouse
-remoteWarehouse=$remoteWarehouse
-warehouseExists=$warehouseExists
-localDocument=$localDocument
-remoteDocument=$remoteDocument
-documentExists=$documentExists''');
-          } catch (_) {
-            // Ignore decode errors for logging
+            await _failEntry(entry, error);
+            return AppFailure(error);
           }
         }
+
         final error = AppError(
           code: RemoteErrorCodes.dependencyMissing,
           message: 'Dépendance distante manquante pour ${entry.entityType}.',
         );
         await _failEntry(entry, error);
         return AppFailure(error);
+      }
+    }
+
+    // Phase 9C: Version check before upsert
+    if (!write.isDelete) {
+      final remoteRowResult = await _remoteWriter.fetchRow(
+        table: write.table,
+        tenantId: write.tenantId,
+        id: write.entityId,
+      );
+      final remoteRow = remoteRowResult.valueOrNull;
+      if (remoteRow != null) {
+        final remoteUpdatedAt = DateTime.tryParse(
+          remoteRow['updated_at']?.toString() ?? '',
+        );
+        if (remoteUpdatedAt != null) {
+          final lastPullAt = await _metadataRepository.getLastPullCompletedAt(
+            write.tenantId,
+          );
+          if (lastPullAt != null && remoteUpdatedAt.isAfter(lastPullAt)) {
+            // Conflict! Remote changed after we last pulled.
+            final error = AppError(
+              code: 'conflict_detected',
+              message: 'Conflit détecté. Les données locales sont conservées.',
+            );
+            await _outboxRepository.markFailed(
+              entry.id,
+              tenantId: entry.tenantId,
+              error: error.message,
+            );
+            await _outboxRepository.addConflict(
+              tenantId: entry.tenantId,
+              entityType: entry.entityType,
+              entityId: entry.entityId,
+              reason: SyncConflictReason.versionMismatch.name,
+              localPayload: entry.payloadJson,
+              remotePayload: jsonEncode(remoteRow),
+              localUpdatedAt: entry.updatedAt,
+              remoteUpdatedAt: remoteUpdatedAt,
+            );
+            return AppFailure(error);
+          }
+        }
       }
     }
 

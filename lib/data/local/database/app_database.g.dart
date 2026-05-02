@@ -1015,6 +1015,16 @@ class $WarehousesTable extends Warehouses
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('depot'),
+  );
   static const VerificationMeta _isDefaultMeta = const VerificationMeta(
     'isDefault',
   );
@@ -1089,6 +1099,7 @@ class $WarehousesTable extends Warehouses
     city,
     address,
     description,
+    type,
     isDefault,
     isActive,
     createdAt,
@@ -1151,6 +1162,12 @@ class $WarehousesTable extends Warehouses
           data['description']!,
           _descriptionMeta,
         ),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
       );
     }
     if (data.containsKey('is_default')) {
@@ -1220,6 +1237,10 @@ class $WarehousesTable extends Warehouses
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
       isDefault: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_default'],
@@ -1257,6 +1278,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
   final String city;
   final String address;
   final String? description;
+  final String type;
   final bool isDefault;
   final bool isActive;
   final DateTime createdAt;
@@ -1270,6 +1292,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
     required this.city,
     required this.address,
     this.description,
+    required this.type,
     required this.isDefault,
     required this.isActive,
     required this.createdAt,
@@ -1288,6 +1311,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
+    map['type'] = Variable<String>(type);
     map['is_default'] = Variable<bool>(isDefault);
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -1309,6 +1333,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      type: Value(type),
       isDefault: Value(isDefault),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
@@ -1332,6 +1357,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
       city: serializer.fromJson<String>(json['city']),
       address: serializer.fromJson<String>(json['address']),
       description: serializer.fromJson<String?>(json['description']),
+      type: serializer.fromJson<String>(json['type']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1350,6 +1376,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
       'city': serializer.toJson<String>(city),
       'address': serializer.toJson<String>(address),
       'description': serializer.toJson<String?>(description),
+      'type': serializer.toJson<String>(type),
       'isDefault': serializer.toJson<bool>(isDefault),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1366,6 +1393,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
     String? city,
     String? address,
     Value<String?> description = const Value.absent(),
+    String? type,
     bool? isDefault,
     bool? isActive,
     DateTime? createdAt,
@@ -1379,6 +1407,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
     city: city ?? this.city,
     address: address ?? this.address,
     description: description.present ? description.value : this.description,
+    type: type ?? this.type,
     isDefault: isDefault ?? this.isDefault,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
@@ -1396,6 +1425,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      type: data.type.present ? data.type.value : this.type,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -1414,6 +1444,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
           ..write('city: $city, ')
           ..write('address: $address, ')
           ..write('description: $description, ')
+          ..write('type: $type, ')
           ..write('isDefault: $isDefault, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -1432,6 +1463,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
     city,
     address,
     description,
+    type,
     isDefault,
     isActive,
     createdAt,
@@ -1449,6 +1481,7 @@ class WarehouseRow extends DataClass implements Insertable<WarehouseRow> {
           other.city == this.city &&
           other.address == this.address &&
           other.description == this.description &&
+          other.type == this.type &&
           other.isDefault == this.isDefault &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
@@ -1464,6 +1497,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
   final Value<String> city;
   final Value<String> address;
   final Value<String?> description;
+  final Value<String> type;
   final Value<bool> isDefault;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
@@ -1478,6 +1512,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
     this.city = const Value.absent(),
     this.address = const Value.absent(),
     this.description = const Value.absent(),
+    this.type = const Value.absent(),
     this.isDefault = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1493,6 +1528,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
     this.city = const Value.absent(),
     this.address = const Value.absent(),
     this.description = const Value.absent(),
+    this.type = const Value.absent(),
     this.isDefault = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1509,6 +1545,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
     Expression<String>? city,
     Expression<String>? address,
     Expression<String>? description,
+    Expression<String>? type,
     Expression<bool>? isDefault,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
@@ -1524,6 +1561,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
       if (city != null) 'city': city,
       if (address != null) 'address': address,
       if (description != null) 'description': description,
+      if (type != null) 'type': type,
       if (isDefault != null) 'is_default': isDefault,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
@@ -1541,6 +1579,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
     Value<String>? city,
     Value<String>? address,
     Value<String?>? description,
+    Value<String>? type,
     Value<bool>? isDefault,
     Value<bool>? isActive,
     Value<DateTime>? createdAt,
@@ -1556,6 +1595,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
       city: city ?? this.city,
       address: address ?? this.address,
       description: description ?? this.description,
+      type: type ?? this.type,
       isDefault: isDefault ?? this.isDefault,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
@@ -1589,6 +1629,9 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
     }
@@ -1620,6 +1663,7 @@ class WarehousesCompanion extends UpdateCompanion<WarehouseRow> {
           ..write('city: $city, ')
           ..write('address: $address, ')
           ..write('description: $description, ')
+          ..write('type: $type, ')
           ..write('isDefault: $isDefault, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -4631,6 +4675,18 @@ class $DocumentsTable extends Documents
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _metadataJsonMeta = const VerificationMeta(
+    'metadataJson',
+  );
+  @override
+  late final GeneratedColumn<String> metadataJson = GeneratedColumn<String>(
+    'metadata_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('{}'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4694,6 +4750,7 @@ class $DocumentsTable extends Documents
     paidAmount,
     remainingAmount,
     companySnapshotJson,
+    metadataJson,
     createdAt,
     updatedAt,
     deletedAt,
@@ -4909,6 +4966,15 @@ class $DocumentsTable extends Documents
         ),
       );
     }
+    if (data.containsKey('metadata_json')) {
+      context.handle(
+        _metadataJsonMeta,
+        metadataJson.isAcceptableOrUnknown(
+          data['metadata_json']!,
+          _metadataJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -5040,6 +5106,10 @@ class $DocumentsTable extends Documents
         DriftSqlType.string,
         data['${effectivePrefix}company_snapshot_json'],
       ),
+      metadataJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}metadata_json'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -5088,6 +5158,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
   final double paidAmount;
   final double remainingAmount;
   final String? companySnapshotJson;
+  final String metadataJson;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? deletedAt;
@@ -5118,6 +5189,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
     required this.paidAmount,
     required this.remainingAmount,
     this.companySnapshotJson,
+    required this.metadataJson,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -5161,6 +5233,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
     if (!nullToAbsent || companySnapshotJson != null) {
       map['company_snapshot_json'] = Variable<String>(companySnapshotJson);
     }
+    map['metadata_json'] = Variable<String>(metadataJson);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -5207,6 +5280,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
       companySnapshotJson: companySnapshotJson == null && nullToAbsent
           ? const Value.absent()
           : Value(companySnapshotJson),
+      metadataJson: Value(metadataJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -5249,6 +5323,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
       companySnapshotJson: serializer.fromJson<String?>(
         json['companySnapshotJson'],
       ),
+      metadataJson: serializer.fromJson<String>(json['metadataJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -5284,6 +5359,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
       'paidAmount': serializer.toJson<double>(paidAmount),
       'remainingAmount': serializer.toJson<double>(remainingAmount),
       'companySnapshotJson': serializer.toJson<String?>(companySnapshotJson),
+      'metadataJson': serializer.toJson<String>(metadataJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -5317,6 +5393,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
     double? paidAmount,
     double? remainingAmount,
     Value<String?> companySnapshotJson = const Value.absent(),
+    String? metadataJson,
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<DateTime?> deletedAt = const Value.absent(),
@@ -5351,6 +5428,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
     companySnapshotJson: companySnapshotJson.present
         ? companySnapshotJson.value
         : this.companySnapshotJson,
+    metadataJson: metadataJson ?? this.metadataJson,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -5411,6 +5489,9 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
       companySnapshotJson: data.companySnapshotJson.present
           ? data.companySnapshotJson.value
           : this.companySnapshotJson,
+      metadataJson: data.metadataJson.present
+          ? data.metadataJson.value
+          : this.metadataJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -5446,6 +5527,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
           ..write('paidAmount: $paidAmount, ')
           ..write('remainingAmount: $remainingAmount, ')
           ..write('companySnapshotJson: $companySnapshotJson, ')
+          ..write('metadataJson: $metadataJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt')
@@ -5481,6 +5563,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
     paidAmount,
     remainingAmount,
     companySnapshotJson,
+    metadataJson,
     createdAt,
     updatedAt,
     deletedAt,
@@ -5515,6 +5598,7 @@ class DocumentRow extends DataClass implements Insertable<DocumentRow> {
           other.paidAmount == this.paidAmount &&
           other.remainingAmount == this.remainingAmount &&
           other.companySnapshotJson == this.companySnapshotJson &&
+          other.metadataJson == this.metadataJson &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt);
@@ -5547,6 +5631,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
   final Value<double> paidAmount;
   final Value<double> remainingAmount;
   final Value<String?> companySnapshotJson;
+  final Value<String> metadataJson;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<DateTime?> deletedAt;
@@ -5578,6 +5663,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
     this.paidAmount = const Value.absent(),
     this.remainingAmount = const Value.absent(),
     this.companySnapshotJson = const Value.absent(),
+    this.metadataJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -5610,6 +5696,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
     this.paidAmount = const Value.absent(),
     this.remainingAmount = const Value.absent(),
     this.companySnapshotJson = const Value.absent(),
+    this.metadataJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -5646,6 +5733,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
     Expression<double>? paidAmount,
     Expression<double>? remainingAmount,
     Expression<String>? companySnapshotJson,
+    Expression<String>? metadataJson,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<DateTime>? deletedAt,
@@ -5679,6 +5767,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
       if (remainingAmount != null) 'remaining_amount': remainingAmount,
       if (companySnapshotJson != null)
         'company_snapshot_json': companySnapshotJson,
+      if (metadataJson != null) 'metadata_json': metadataJson,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -5713,6 +5802,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
     Value<double>? paidAmount,
     Value<double>? remainingAmount,
     Value<String?>? companySnapshotJson,
+    Value<String>? metadataJson,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<DateTime?>? deletedAt,
@@ -5745,6 +5835,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
       paidAmount: paidAmount ?? this.paidAmount,
       remainingAmount: remainingAmount ?? this.remainingAmount,
       companySnapshotJson: companySnapshotJson ?? this.companySnapshotJson,
+      metadataJson: metadataJson ?? this.metadataJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -5835,6 +5926,9 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
         companySnapshotJson.value,
       );
     }
+    if (metadataJson.present) {
+      map['metadata_json'] = Variable<String>(metadataJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -5879,6 +5973,7 @@ class DocumentsCompanion extends UpdateCompanion<DocumentRow> {
           ..write('paidAmount: $paidAmount, ')
           ..write('remainingAmount: $remainingAmount, ')
           ..write('companySnapshotJson: $companySnapshotJson, ')
+          ..write('metadataJson: $metadataJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -9915,6 +10010,7 @@ typedef $$WarehousesTableCreateCompanionBuilder =
       Value<String> city,
       Value<String> address,
       Value<String?> description,
+      Value<String> type,
       Value<bool> isDefault,
       Value<bool> isActive,
       Value<DateTime> createdAt,
@@ -9931,6 +10027,7 @@ typedef $$WarehousesTableUpdateCompanionBuilder =
       Value<String> city,
       Value<String> address,
       Value<String?> description,
+      Value<String> type,
       Value<bool> isDefault,
       Value<bool> isActive,
       Value<DateTime> createdAt,
@@ -9980,6 +10077,11 @@ class $$WarehousesTableFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10053,6 +10155,11 @@ class $$WarehousesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isDefault => $composableBuilder(
     column: $table.isDefault,
     builder: (column) => ColumnOrderings(column),
@@ -10111,6 +10218,9 @@ class $$WarehousesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
   GeneratedColumn<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => column);
 
@@ -10165,6 +10275,7 @@ class $$WarehousesTableTableManager
                 Value<String> city = const Value.absent(),
                 Value<String> address = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -10179,6 +10290,7 @@ class $$WarehousesTableTableManager
                 city: city,
                 address: address,
                 description: description,
+                type: type,
                 isDefault: isDefault,
                 isActive: isActive,
                 createdAt: createdAt,
@@ -10195,6 +10307,7 @@ class $$WarehousesTableTableManager
                 Value<String> city = const Value.absent(),
                 Value<String> address = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String> type = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -10209,6 +10322,7 @@ class $$WarehousesTableTableManager
                 city: city,
                 address: address,
                 description: description,
+                type: type,
                 isDefault: isDefault,
                 isActive: isActive,
                 createdAt: createdAt,
@@ -11518,6 +11632,7 @@ typedef $$DocumentsTableCreateCompanionBuilder =
       Value<double> paidAmount,
       Value<double> remainingAmount,
       Value<String?> companySnapshotJson,
+      Value<String> metadataJson,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -11551,6 +11666,7 @@ typedef $$DocumentsTableUpdateCompanionBuilder =
       Value<double> paidAmount,
       Value<double> remainingAmount,
       Value<String?> companySnapshotJson,
+      Value<String> metadataJson,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<DateTime?> deletedAt,
@@ -11693,6 +11809,11 @@ class $$DocumentsTableFilterComposer
 
   ColumnFilters<String> get companySnapshotJson => $composableBuilder(
     column: $table.companySnapshotJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get metadataJson => $composableBuilder(
+    column: $table.metadataJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11851,6 +11972,11 @@ class $$DocumentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get metadataJson => $composableBuilder(
+    column: $table.metadataJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -11982,6 +12108,11 @@ class $$DocumentsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get metadataJson => $composableBuilder(
+    column: $table.metadataJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -12049,6 +12180,7 @@ class $$DocumentsTableTableManager
                 Value<double> paidAmount = const Value.absent(),
                 Value<double> remainingAmount = const Value.absent(),
                 Value<String?> companySnapshotJson = const Value.absent(),
+                Value<String> metadataJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -12080,6 +12212,7 @@ class $$DocumentsTableTableManager
                 paidAmount: paidAmount,
                 remainingAmount: remainingAmount,
                 companySnapshotJson: companySnapshotJson,
+                metadataJson: metadataJson,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -12113,6 +12246,7 @@ class $$DocumentsTableTableManager
                 Value<double> paidAmount = const Value.absent(),
                 Value<double> remainingAmount = const Value.absent(),
                 Value<String?> companySnapshotJson = const Value.absent(),
+                Value<String> metadataJson = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<DateTime?> deletedAt = const Value.absent(),
@@ -12144,6 +12278,7 @@ class $$DocumentsTableTableManager
                 paidAmount: paidAmount,
                 remainingAmount: remainingAmount,
                 companySnapshotJson: companySnapshotJson,
+                metadataJson: metadataJson,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,

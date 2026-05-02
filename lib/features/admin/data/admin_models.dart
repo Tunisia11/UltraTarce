@@ -40,6 +40,7 @@ class AdminTenantOverview {
     required this.productCount,
     required this.documentCount,
     required this.syncErrorCount,
+    required this.syncConflictCount,
     this.lastActivityDate,
     required this.createdAt,
   });
@@ -52,6 +53,7 @@ class AdminTenantOverview {
   final int productCount;
   final int documentCount;
   final int syncErrorCount;
+  final int syncConflictCount;
   final DateTime? lastActivityDate;
   final DateTime createdAt;
 }

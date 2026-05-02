@@ -94,7 +94,7 @@ class _AdminSubscriptionsPageState extends State<AdminSubscriptionsPage> {
                     Expanded(
                       flex: 1,
                       child: DropdownButtonFormField<String>(
-                        value: _filterStatus,
+                        initialValue: _filterStatus,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
@@ -122,8 +122,9 @@ class _AdminSubscriptionsPageState extends State<AdminSubscriptionsPage> {
                           ),
                         ],
                         onChanged: (value) {
-                          if (value != null)
+                          if (value != null) {
                             setState(() => _filterStatus = value);
+                          }
                         },
                       ),
                     ),

@@ -94,6 +94,7 @@ class Warehouse {
     required this.city,
     this.code = '',
     this.address = '',
+    this.type = 'depot',
     this.active = true,
   });
 
@@ -102,6 +103,7 @@ class Warehouse {
   final String city;
   final String code;
   final String address;
+  final String type;
   final bool active;
 
   Map<String, dynamic> toJson() => {
@@ -110,6 +112,7 @@ class Warehouse {
     'city': city,
     'code': code,
     'address': address,
+    'type': type,
     'active': active,
   };
 
@@ -120,6 +123,7 @@ class Warehouse {
       city: json['city'] as String? ?? '',
       code: json['code'] as String? ?? '',
       address: json['address'] as String? ?? '',
+      type: json['type'] as String? ?? 'depot',
       active: json['active'] as bool? ?? true,
     );
   }
@@ -129,6 +133,7 @@ class Warehouse {
     String? city,
     String? code,
     String? address,
+    String? type,
     bool? active,
   }) {
     return Warehouse(
@@ -137,6 +142,7 @@ class Warehouse {
       city: city ?? this.city,
       code: code ?? this.code,
       address: address ?? this.address,
+      type: type ?? this.type,
       active: active ?? this.active,
     );
   }
@@ -188,6 +194,21 @@ class Product {
     this.stockTracked = true,
     this.active = true,
   });
+
+  factory Product.initial() => const Product(
+    id: '',
+    name: '',
+    sku: '',
+    category: '',
+    purchaseHt: 0,
+    saleHt: 0,
+    tvaRate: TvaRate.rate19,
+    minStock: 0,
+    serialTracked: false,
+    stockByWarehouse: {},
+    serialsByWarehouse: {},
+    imageUrl: '',
+  );
 
   final String id;
   final String name;
@@ -546,6 +567,7 @@ class BusinessDocument {
     this.applyTimbreFiscal = false,
     this.timbreFiscalAmount = 0,
     this.payments = const [],
+    this.metadata = const {},
   });
 
   final String id;
@@ -562,14 +584,34 @@ class BusinessDocument {
   final CompanyProfile? companySnapshot;
   final String? sourceNumber;
   final String? note;
+  final Map<String, dynamic> metadata;
   final bool stockApplied;
   final bool applyTimbreFiscal;
   final double timbreFiscalAmount;
   final List<PaymentEntry> payments;
 
   bool get isLocked =>
-      status == DocumentStatus.validated || status == DocumentStatus.canceled;
+      status == DocumentStatus.validated ||
+      status == DocumentStatus.partialReturn ||
+      status == DocumentStatus.closed ||
+      status == DocumentStatus.canceled;
   bool get isCanceled => status == DocumentStatus.canceled;
+  bool get isClosed => status == DocumentStatus.closed;
+
+  // Metadata helpers for Bon de Sortie
+  String? get sourceWarehouseId => metadata['sourceWarehouseId'] as String?;
+  String? get targetWarehouseId => metadata['targetWarehouseId'] as String?;
+  String? get vehicleName => metadata['vehicleName'] as String?;
+  String? get driverName => metadata['driverName'] as String?;
+  String? get destinationLabel => metadata['destinationLabel'] as String?;
+  Map<String, int> get returnedQuantities {
+    final raw = metadata['returnedQuantities'];
+    if (raw is Map) {
+      return raw.map((k, v) => MapEntry(k.toString(), (v as num).toInt()));
+    }
+    return {};
+  }
+
   double get totalHt => lines.fold(0, (total, line) => total + line.totalHt);
   double get totalTva => lines.fold(0, (total, line) => total + line.tvaAmount);
   double get totalTtc => totalHt + totalTva;
@@ -601,6 +643,8 @@ class BusinessDocument {
     bool? applyTimbreFiscal,
     double? timbreFiscalAmount,
     List<PaymentEntry>? payments,
+    String? warehouseId,
+    Map<String, dynamic>? metadata,
   }) {
     return BusinessDocument(
       id: id,
@@ -613,10 +657,11 @@ class BusinessDocument {
       partnerAddress: partnerAddress,
       date: date,
       lines: lines ?? this.lines,
-      warehouseId: warehouseId,
+      warehouseId: warehouseId ?? this.warehouseId,
       companySnapshot: companySnapshot ?? this.companySnapshot,
       sourceNumber: sourceNumber,
       note: note,
+      metadata: metadata ?? this.metadata,
       stockApplied: stockApplied ?? this.stockApplied,
       applyTimbreFiscal: applyTimbreFiscal ?? this.applyTimbreFiscal,
       timbreFiscalAmount: timbreFiscalAmount ?? this.timbreFiscalAmount,
@@ -639,6 +684,7 @@ class BusinessDocument {
     'companySnapshot': companySnapshot?.toJson(),
     'sourceNumber': sourceNumber,
     'note': note,
+    'metadata': metadata,
     'stockApplied': stockApplied,
     'applyTimbreFiscal': applyTimbreFiscal,
     'timbreFiscalAmount': timbreFiscalAmount,
@@ -674,6 +720,7 @@ class BusinessDocument {
           : null,
       sourceNumber: json['sourceNumber'] as String?,
       note: json['note'] as String?,
+      metadata: Map<String, dynamic>.from(json['metadata'] as Map? ?? const {}),
       stockApplied: json['stockApplied'] as bool? ?? false,
       applyTimbreFiscal: json['applyTimbreFiscal'] as bool? ?? false,
       timbreFiscalAmount: (json['timbreFiscalAmount'] as num? ?? 0).toDouble(),
@@ -699,6 +746,8 @@ class StockMovement {
     required this.quantity,
     required this.warehouseId,
     this.serialNumbers = const [],
+    this.reason,
+    this.note,
   });
 
   final DateTime date;
@@ -710,6 +759,8 @@ class StockMovement {
   final int quantity;
   final String warehouseId;
   final List<String> serialNumbers;
+  final String? reason;
+  final String? note;
 
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String(),
@@ -721,6 +772,8 @@ class StockMovement {
     'quantity': quantity,
     'warehouseId': warehouseId,
     'serialNumbers': serialNumbers,
+    'reason': reason,
+    'note': note,
   };
 
   factory StockMovement.fromJson(Map<String, dynamic> json) {
@@ -740,6 +793,8 @@ class StockMovement {
       serialNumbers: List<String>.from(
         json['serialNumbers'] as List? ?? const [],
       ),
+      reason: json['reason'] as String?,
+      note: json['note'] as String?,
     );
   }
 }
@@ -794,6 +849,30 @@ class AppSnapshot {
     required this.sequences,
     required this.auditEvents,
   });
+
+  AppSnapshot copyWith({
+    CompanyProfile? company,
+    List<Warehouse>? warehouses,
+    List<Category>? categories,
+    List<Product>? products,
+    List<Partner>? partners,
+    List<BusinessDocument>? documents,
+    List<StockMovement>? movements,
+    Map<DocumentType, int>? sequences,
+    List<AuditEvent>? auditEvents,
+  }) {
+    return AppSnapshot(
+      company: company ?? this.company,
+      warehouses: warehouses ?? this.warehouses,
+      categories: categories ?? this.categories,
+      products: products ?? this.products,
+      partners: partners ?? this.partners,
+      documents: documents ?? this.documents,
+      movements: movements ?? this.movements,
+      sequences: sequences ?? this.sequences,
+      auditEvents: auditEvents ?? this.auditEvents,
+    );
+  }
 
   final CompanyProfile company;
   final List<Warehouse> warehouses;

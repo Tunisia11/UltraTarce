@@ -70,7 +70,12 @@ class TenantCubit extends Cubit<TenantState> {
       await _tenantRepository.storeSelectedTenant(user: user, tenant: tenant);
       emit(TenantSelected(memberships: [tenant], selectedTenant: tenant));
     } catch (error) {
-      emit(TenantFailure(_friendlyMessage(error)));
+      emit(
+        TenantFailure(
+          'Compte créé, mais impossible de créer la société. Réessayez.',
+          companyName: companyName,
+        ),
+      );
     }
   }
 

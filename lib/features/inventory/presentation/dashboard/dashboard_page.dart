@@ -94,7 +94,7 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
                     detail: 'Nom, prix, stock',
                     icon: Icons.add_box_outlined,
                     color: AppColors.cyan,
-                    onTap: () => _showProductDialog(),
+                    onTap: () => _openProductForm(),
                   ),
                   QuickActionButton(
                     width: width,
@@ -315,7 +315,7 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
                     title: 'Premier produit',
                     subtitle: 'Nom, prix, stock',
                     done: _hasFirstProduct,
-                    onTap: () => _showProductDialog(),
+                    onTap: () => _openProductForm(),
                   ),
                   StepPill(
                     key: _firstClientStepKey,
@@ -395,11 +395,19 @@ extension _InventoryDashboardPage on _InventoryHomePageState {
               ),
               QuickActionButton(
                 width: width,
+                label: 'Sortie camion',
+                detail: 'Charger produits dans un véhicule',
+                icon: Icons.local_shipping_outlined,
+                color: AppColors.cyan,
+                onTap: () => _openBonSortieForm(),
+              ),
+              QuickActionButton(
+                width: width,
                 label: 'Ajouter produit',
                 detail: 'Prix, TVA, stock',
                 icon: Icons.inventory_2_outlined,
                 color: AppColors.cyan,
-                onTap: () => _showProductDialog(),
+                onTap: () => _openProductForm(),
               ),
               QuickActionButton(
                 width: width,

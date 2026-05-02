@@ -1,0 +1,28 @@
+00:00 +0: loading /Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart                                                                                   00:01 +0: loading /Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart                                                                                   00:01 +0: Stock history shows recent movements and document link                                                                                                                                       00:02 +0: Stock history shows recent movements and document link                                                                                                                                       00:02 +0: Stock history shows recent movements and document link                                                                                                                                       
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: Too many elements
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:696:24)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:868:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2305:32)
+#3      main.<anonymous closure> (file:///Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart:285:18)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  Stock history shows recent movements and document link
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +0 -1: Stock history shows recent movements and document link [E]                                                                                                                                
+  Test failed. See exception logs above.
+  The test description was: Stock history shows recent movements and document link
+  
+
+To run this test again: /usr/local/flutter/bin/cache/dart-sdk/bin/dart test /Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart -p vm --plain-name 'Stock history shows recent movements and document link'
+00:02 +0 -1: Some tests failed.                                                                                                                                                                        

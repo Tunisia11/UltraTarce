@@ -19,6 +19,7 @@ class WarehouseMapper {
       code: Value(warehouse.code),
       city: Value(warehouse.city),
       address: Value(warehouse.address),
+      type: Value(warehouse.type),
       isDefault: Value(isDefault),
       isActive: Value(warehouse.active),
       updatedAt: Value(now),
@@ -36,6 +37,7 @@ class WarehouseMapper {
       city: row.city,
       code: row.code,
       address: row.address,
+      type: row.type,
       active: row.isActive,
     );
   }

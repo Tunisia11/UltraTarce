@@ -12,6 +12,7 @@ class TenantSelectionPage extends StatefulWidget {
     required this.onCreateTenant,
     required this.onLogout,
     this.message,
+    this.companyName,
   });
 
   final AppUser user;
@@ -20,13 +21,20 @@ class TenantSelectionPage extends StatefulWidget {
   final ValueChanged<String> onCreateTenant;
   final VoidCallback onLogout;
   final String? message;
+  final String? companyName;
 
   @override
   State<TenantSelectionPage> createState() => _TenantSelectionPageState();
 }
 
 class _TenantSelectionPageState extends State<TenantSelectionPage> {
-  final _companyController = TextEditingController();
+  late final TextEditingController _companyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _companyController = TextEditingController(text: widget.companyName);
+  }
 
   @override
   void dispose() {
@@ -64,7 +72,7 @@ class _TenantSelectionPageState extends State<TenantSelectionPage> {
                   const SizedBox(height: 12),
                   Text(
                     widget.message!,
-                    style: const TextStyle(color: AppColors.muted),
+                    style: const TextStyle(color: AppColors.warning),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -95,9 +103,15 @@ class _TenantSelectionPageState extends State<TenantSelectionPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Text(
-                          'Aucune société n’est encore liée à ce compte.',
-                        ),
+                        if (widget.message != null)
+                          Text(
+                            widget.message!,
+                            style: const TextStyle(color: AppColors.warning),
+                          )
+                        else
+                          const Text(
+                            'Aucune société n’est encore liée à ce compte.',
+                          ),
                         const SizedBox(height: 16),
                         TextField(
                           controller: _companyController,
@@ -109,7 +123,11 @@ class _TenantSelectionPageState extends State<TenantSelectionPage> {
                         ElevatedButton(
                           onPressed: () =>
                               widget.onCreateTenant(_companyController.text),
-                          child: const Text('Créer votre société'),
+                          child: Text(
+                            widget.message != null
+                                ? 'Réessayer la création de société'
+                                : 'Créer votre société',
+                          ),
                         ),
                       ],
                     ),

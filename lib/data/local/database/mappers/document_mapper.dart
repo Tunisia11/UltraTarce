@@ -43,6 +43,7 @@ class DocumentMapper {
       totalTtc: Value(document.totalTtc),
       paidAmount: Value(document.paidAmount),
       remainingAmount: Value(document.remainingAmount),
+      metadataJson: Value(jsonEncode(document.metadata)),
       companySnapshotJson: Value(
         document.companySnapshot == null
             ? null
@@ -122,6 +123,9 @@ class DocumentMapper {
       lines: lines.map((row) => _lineFromRow(row, tenantId)).toList(),
       warehouseId: TenantRowScope.domainId(tenantId, document.warehouseId),
       companySnapshot: _companySnapshotFromJson(document.companySnapshotJson),
+      metadata: Map<String, dynamic>.from(
+        jsonDecode(document.metadataJson) as Map? ?? const {},
+      ),
       sourceNumber: document.sourceNumber,
       note: document.notes,
       stockApplied: document.stockApplied,

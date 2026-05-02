@@ -36,6 +36,7 @@ class FakeAdminRepository implements AdminRepository {
         productCount: 10,
         documentCount: 20,
         syncErrorCount: 0,
+        syncConflictCount: 0,
         createdAt: DateTime(2025),
       ),
     ];

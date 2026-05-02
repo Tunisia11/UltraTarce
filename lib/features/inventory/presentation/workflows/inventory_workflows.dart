@@ -7,6 +7,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     final city = TextEditingController(text: warehouse?.city ?? '');
     final address = TextEditingController(text: warehouse?.address ?? '');
     var active = warehouse?.active ?? true;
+    var type = warehouse?.type ?? 'depot';
 
     await showDialog<void>(
       context: context,
@@ -23,6 +24,27 @@ extension _InventoryWorkflows on _InventoryHomePageState {
                 _dialogField(width: 140, controller: code, label: 'Code'),
                 _dialogField(width: 180, controller: city, label: 'Ville'),
                 _dialogField(width: 440, controller: address, label: 'Adresse'),
+                SizedBox(
+                  width: 240,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: type,
+                    decoration: const InputDecoration(
+                      labelText: 'Type de dépôt',
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'depot',
+                        child: Text('🏠 Dépôt fixe'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'mobile',
+                        child: Text('🚚 Unité mobile (Camion)'),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setDialogState(() => type = value ?? 'depot'),
+                  ),
+                ),
                 _switchTile(
                   label: 'Actif',
                   value: active,
@@ -49,6 +71,7 @@ extension _InventoryWorkflows on _InventoryHomePageState {
                   code: code.text.trim(),
                   address: address.text.trim(),
                   active: active,
+                  type: type,
                 );
                 _updateState(() {
                   final cubit = _warehouseCubit;
@@ -75,6 +98,11 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     if (result.archived) {
       _showMessage('Dépôt utilisé: il a été désactivé.');
     }
+  }
+
+  void _deleteProduct(Product product) {
+    _productsCubit.deleteOrArchiveProduct(product);
+    _updateState(() => _applyRepositoryState());
   }
 
   Future<void> _showCategoryDialog([Category? category]) async {
@@ -162,15 +190,28 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     return double.tryParse(raw.trim().replaceAll(',', '.')) ?? fallback;
   }
 
-  String _safeRemoteImageUrl(String raw) {
-    return AppSnapshotCodec.safeRemoteImageUrl(raw);
-  }
-
   Product _productById(String id) =>
       _products.firstWhere((product) => product.id == id);
 
-  Warehouse _warehouseById(String id) =>
-      _warehouses.firstWhere((warehouse) => warehouse.id == id);
+  Warehouse? _warehouseByIdOrNull(String? id) {
+    if (id == null || id.isEmpty) return null;
+    for (final warehouse in _warehouses) {
+      if (warehouse.id == id) return warehouse;
+    }
+    return null;
+  }
+
+  Warehouse _warehouseById(String? id) {
+    final warehouse = _warehouseByIdOrNull(id);
+    if (warehouse != null) return warehouse;
+    return const Warehouse(
+      id: 'missing',
+      name: 'Dépôt introuvable',
+      city: '',
+      code: '???',
+      address: '',
+    );
+  }
 
   String _generatedSerial(String sku, int index) =>
       'SN-$sku-${DateTime.now().microsecondsSinceEpoch}-$index';
@@ -567,6 +608,9 @@ extension _InventoryWorkflows on _InventoryHomePageState {
       lines: List<DocumentLine>.from(_draftLines),
       warehouseId: _selectedWarehouseId,
       company: _company,
+      metadata: _newDocumentType == DocumentType.bonSortie
+          ? {'targetWarehouseId': _selectedTargetWarehouseId}
+          : const {},
       isUpdate: editingIndex >= 0,
     );
     final document = _appRepository.snapshot.documents.firstWhere(
@@ -810,6 +854,22 @@ extension _InventoryWorkflows on _InventoryHomePageState {
         );
         lines = stockMutation.lines;
         stockApplied = true;
+      }
+    } else if (DocumentLifecycleService.validationRequiresTransferStock(
+      document,
+    )) {
+      if (!document.stockApplied) {
+        try {
+          stockMutation = _stockCubit.transferStockForDocument(
+            document: document,
+            date: DateTime.now(),
+          );
+          lines = stockMutation.lines;
+          stockApplied = true;
+        } catch (e) {
+          if (!quiet) _showMessage(e.toString(), isError: true);
+          return false;
+        }
       }
     } else if (DocumentLifecycleService.validationRequiresInboundStock(
       document,
@@ -1234,5 +1294,180 @@ extension _InventoryWorkflows on _InventoryHomePageState {
     _showMessage(
       '${creditNote.number} créé en brouillon. Validez pour réintégrer le stock et réduire le reste à encaisser.',
     );
+  }
+
+  Future<void> _showSortieReturnDialog(BusinessDocument document) async {
+    final returnedQuantities = <String, int>{};
+    for (final line in document.lines) {
+      returnedQuantities[line.productId] = 0;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (_, setDialogState) => AlertDialog(
+          title: Text('Retour produits - ${document.number}'),
+          content: SizedBox(
+            width: 520,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Saisissez les quantités qui réintègrent le dépôt d’origine.',
+                  style: TextStyle(color: AppColors.muted),
+                ),
+                const SizedBox(height: 16),
+                for (final line in document.lines)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                line.label,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                'Sorti: ${line.quantity} · Déjà retourné: ${document.returnedQuantities[line.productId] ?? 0}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        SizedBox(
+                          width: 80,
+                          child: TextFormField(
+                            initialValue: '0',
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            decoration: const InputDecoration(isDense: true),
+                            onChanged: (val) {
+                              final qty = int.tryParse(val) ?? 0;
+                              setDialogState(
+                                () => returnedQuantities[line.productId] = qty,
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final totalToReturn = returnedQuantities.values.fold(
+                  0,
+                  (sum, q) => sum + q,
+                );
+                if (totalToReturn <= 0) {
+                  _showMessage(
+                    'Saisissez au moins une quantité à retourner.',
+                    isError: true,
+                  );
+                  return;
+                }
+
+                // Check limits
+                for (final line in document.lines) {
+                  final qty = returnedQuantities[line.productId] ?? 0;
+                  final alreadyReturned =
+                      document.returnedQuantities[line.productId] ?? 0;
+                  if (qty > (line.quantity - alreadyReturned)) {
+                    _showMessage(
+                      'Retour invalide pour ${line.label}. Maximum possible: ${line.quantity - alreadyReturned}',
+                      isError: true,
+                    );
+                    return;
+                  }
+                }
+
+                _updateState(() {
+                  _stockCubit.applySortieReturn(
+                    products: _products,
+                    document: document,
+                    returnedQuantities: returnedQuantities,
+                    date: DateTime.now(),
+                  );
+                  _documentsCubit.registerSortieReturn(
+                    document: document,
+                    returnedQuantities: returnedQuantities,
+                    date: DateTime.now(),
+                  );
+                  _applyRepositoryState();
+                });
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Valider le retour'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _closeSortieWorkflow(BusinessDocument document) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clôturer la sortie ?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Cette action est irréversible. Le stock restant dans le camion sera considéré comme vendu ou livré.',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Récapitulatif:',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            for (final line in document.lines) ...[
+              const SizedBox(height: 4),
+              Text(
+                '· ${line.label}: ${line.quantity - (document.returnedQuantities[line.productId] ?? 0)} vendu(s)',
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Garder ouvert'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryContainer,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clôturer définitivement'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      _updateState(() {
+        _documentsCubit.closeSortie(document: document, date: DateTime.now());
+        _applyRepositoryState();
+      });
+    }
   }
 }

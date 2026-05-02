@@ -14,6 +14,7 @@ import 'package:ultra_trace/data/sync/sync_outbox_repository.dart';
 import 'package:ultra_trace/data/sync/sync_outbox_service.dart';
 import 'package:ultra_trace/data/sync/sync_push_service.dart';
 import 'package:ultra_trace/data/sync/sync_remote_writer.dart';
+import 'package:ultra_trace/data/sync/sync_metadata_repository.dart';
 import 'package:ultra_trace/storage/app_storage.dart';
 
 void main() {
@@ -281,6 +282,7 @@ _PushHarness _createHarness({
       connectivityService: connectivity,
       tenantContext: tenantContext,
       remoteWriter: effectiveRemote,
+      metadataRepository: SyncMetadataRepository(database),
     ),
   );
 }
@@ -361,5 +363,14 @@ class _FakeSyncRemoteWriter implements SyncRemoteWriter {
     required String number,
   }) async {
     return const AppSuccess<Map<String, dynamic>?>(null);
+  }
+
+  @override
+  Future<AppResult<Map<String, dynamic>?>> fetchRow({
+    required String table,
+    required String tenantId,
+    required String id,
+  }) async {
+    return const AppSuccess(null);
   }
 }

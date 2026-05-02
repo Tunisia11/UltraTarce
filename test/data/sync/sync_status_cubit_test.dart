@@ -10,6 +10,7 @@ import 'package:ultra_trace/data/sync/sync_outbox_repository.dart';
 import 'package:ultra_trace/data/sync/sync_outbox_service.dart';
 import 'package:ultra_trace/data/sync/sync_status.dart';
 import 'package:ultra_trace/data/sync/sync_status_cubit.dart';
+import 'package:ultra_trace/data/sync/sync_conflict_repository.dart';
 import 'package:ultra_trace/storage/app_storage.dart';
 
 void main() {
@@ -42,6 +43,8 @@ void main() {
       outboxRepository: outboxRepository,
       connectivityService: connectivity,
       tenantContext: tenantContext,
+      conflictRepository: SyncConflictRepository(database),
+      pullService: null,
     )..start();
     addTearDown(cubit.close);
     addTearDown(connectivity.dispose);

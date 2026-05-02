@@ -38,6 +38,16 @@ import '../../../data/sync/sync_push_service.dart';
 import '../../../data/sync/sync_remote_writer.dart';
 import '../../../data/sync/sync_status.dart';
 import '../../../data/sync/sync_status_cubit.dart';
+import '../../../data/sync/remote_pull_repository.dart';
+import '../../../data/sync/local_cloud_import_service.dart';
+import '../../../data/sync/cloud_bootstrap_cubit.dart';
+import '../../../data/sync/presentation/cloud_bootstrap_gate.dart';
+import '../../../data/sync/local_tenant_data_status.dart';
+import '../../../data/sync/sync_metadata_repository.dart';
+import '../../../data/sync/sync_pull_service.dart';
+import '../../../data/sync/sync_conflict_repository.dart';
+import '../../../data/sync/sync_conflict_service.dart';
+import '../../../data/sync/presentation/sync_conflicts_page.dart';
 import '../../../domain/app_enums.dart';
 import '../../../domain/app_models.dart';
 import '../../../domain/services/document_lifecycle_service.dart';
@@ -80,20 +90,20 @@ import '../widgets/panel.dart';
 import '../widgets/preview_info.dart';
 import '../widgets/preview_lines.dart';
 import '../widgets/preview_total_row.dart';
-import '../widgets/price_insight.dart';
-import '../widgets/product_image.dart';
+import 'widgets/product_image.dart';
 import '../widgets/quick_action_button.dart';
 import '../widgets/small_chip.dart';
 import '../widgets/square_icon_button.dart';
 import '../widgets/step_pill.dart';
 import '../widgets/total_item.dart';
 import '../../team/presentation/team_page.dart';
+import 'products/product_form_page.dart';
+import 'sales/bon_sortie_form_page.dart';
 
 part 'navigation/app_side_menu.dart';
 part 'navigation/app_navigation_bar.dart';
 part 'dashboard/dashboard_page.dart';
 part 'sales/sales_page.dart';
-part 'products/product_form_page.dart';
 part 'products/products_page.dart';
 part 'products/widgets/product_catalogue_card.dart';
 part 'clients/client_form_page.dart';
@@ -137,6 +147,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   late List<BusinessDocument> _documents;
   late List<StockMovement> _movements;
   late List<AuditEvent> _auditEvents;
+  int _logoVersion = 0;
 
   final Map<DocumentType, int> _sequences = {
     DocumentType.devis: 4,
@@ -177,6 +188,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   String _selectedProductId = 'p1';
   String _selectedPurchaseProductId = 'p2';
   String _selectedWarehouseId = 'sfax';
+  String _selectedTargetWarehouseId = '';
   String? _selectedDocumentId;
   String? _editingDocumentId;
   String _productCategoryFilter = 'Tous';
@@ -211,8 +223,10 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   late final DeviceIdentityService _deviceIdentityService;
   late final ConnectivityService _connectivityService;
   late final SyncOutboxRepository _syncOutboxRepository;
+  late final SyncConflictRepository _syncConflictRepository;
   late final SyncOutboxService _syncOutboxService;
   late final SyncPushService _syncPushService;
+  late final SyncConflictService _syncConflictService;
 
   late final InventoryCubit _inventoryCubit;
   late final DashboardCubit _dashboardCubit;
@@ -228,6 +242,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
   late final BackupCubit _backupCubit;
   late final OnboardingCubit _onboardingCubit;
   late final SyncStatusCubit _syncStatusCubit;
+  late final CloudBootstrapCubit _cloudBootstrapCubit;
 
   final _dashboardPrimaryActionKey = GlobalKey(debugLabel: 'guide-sale-cta');
   final _firstProductStepKey = GlobalKey(debugLabel: 'guide-first-product');
@@ -306,6 +321,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     _backupCubit.close();
     _onboardingCubit.close();
     _syncStatusCubit.close();
+    _cloudBootstrapCubit.close();
     _connectivityService.dispose();
     _syncOutboxRepository.close();
     _database.close();
@@ -322,6 +338,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     _deviceIdentityService = const DeviceIdentityService();
     _connectivityService = ConnectivityService();
     _syncOutboxRepository = SyncOutboxRepository(_database);
+    _syncConflictRepository = SyncConflictRepository(_database);
     _syncOutboxService = SyncOutboxService(
       repository: _syncOutboxRepository,
       deviceIdentityService: _deviceIdentityService,
@@ -334,6 +351,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
       remoteWriter: SupabaseSyncRemoteWriter(
         provider: SupabaseClientProvider(config: _appConfig),
       ),
+      metadataRepository: SyncMetadataRepository(_database),
     );
     final localDataSource = AppSnapshotLocalDataSource(
       fallbackSnapshot: _snapshot(),
@@ -381,10 +399,94 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     _companyCubit = CompanyCubit(_companyRepository, _auditRepository);
     _backupCubit = BackupCubit(_backupRepository, _auditRepository);
     _onboardingCubit = OnboardingCubit();
+
+    final supabaseClient = SupabaseClientProvider(
+      config: _appConfig,
+    ).clientOrNull;
+
+    SyncPullService? pullService;
+
+    final importService = LocalCloudImportService(
+      database: _database,
+      outboxRepository: _syncOutboxRepository,
+      inspectLocal: (tenantId) async {
+        final products = await _database.productDao.getAllProducts(
+          tenantId: tenantId,
+        );
+        final clients = await _database.partnerDao.getClients(
+          tenantId: tenantId,
+        );
+        final suppliers = await _database.partnerDao.getSuppliers(
+          tenantId: tenantId,
+        );
+        final documents = await _database.documentDao.getDocuments(
+          tenantId: tenantId,
+        );
+        final movements = await _database.stockDao.getMovements(
+          tenantId: tenantId,
+        );
+        final warehouses = await _database.warehouseDao.getWarehouses(
+          tenantId: tenantId,
+        );
+        final categories = await _database.categoryDao.getCategories(
+          tenantId: tenantId,
+        );
+        return LocalTenantDataStatus(
+          productCount: products.length,
+          partnerCount: clients.length + suppliers.length,
+          documentCount: documents.length,
+          stockMovementCount: movements.length,
+          warehouseCount: warehouses.length,
+          categoryCount: categories.length,
+        );
+      },
+      countPendingOutbox: (tenantId) async {
+        final pending = await _syncOutboxRepository.listPending(
+          tenantId: tenantId,
+        );
+        return pending.length;
+      },
+      writeSnapshot: (tenantId, pullResult) async {
+        final snapshot = pullResult.toSnapshot();
+        await _driftStore.replaceSnapshot(snapshot);
+        // After import, refresh local repositories
+        _applySnapshot(snapshot);
+        _inventoryCubit.refresh();
+        _refreshApplicationCubits();
+      },
+    );
+
+    _syncConflictService = SyncConflictService(
+      conflictRepository: _syncConflictRepository,
+      outboxRepository: _syncOutboxRepository,
+      importService: importService,
+    );
+
+    if (supabaseClient == null) {
+      _cloudBootstrapCubit = CloudBootstrapCubit.localOnly()
+        ..checkBootstrap(_tenantContext.selectedTenantId);
+    } else {
+      final remotePullRepository = RemotePullRepository(supabaseClient);
+      final metadataRepository = SyncMetadataRepository(_database);
+
+      pullService = SyncPullService(
+        remotePullRepository: remotePullRepository,
+        metadataRepository: metadataRepository,
+        importService: importService,
+      );
+
+      _cloudBootstrapCubit = CloudBootstrapCubit(
+        remotePullRepository: remotePullRepository,
+        importService: importService,
+      )..checkBootstrap(_tenantContext.selectedTenantId);
+    }
+
     _syncStatusCubit = SyncStatusCubit(
       outboxRepository: _syncOutboxRepository,
       connectivityService: _connectivityService,
       tenantContext: _tenantContext,
+      conflictRepository: _syncConflictRepository,
+      pullService: pullService,
     )..start();
   }
 
@@ -482,6 +584,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     if (selectedDocumentId != null) {
       _selectedDocumentId = selectedDocumentId;
     }
+    _logoVersion++;
     _refreshApplicationCubits();
   }
 
@@ -579,9 +682,47 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     )) {
       _selectedWarehouseId = selectableWarehouses.firstOrNull?.id ?? '';
     }
+    if (selectableWarehouses.every(
+      (warehouse) => warehouse.id != _selectedTargetWarehouseId,
+    )) {
+      _selectedTargetWarehouseId = selectableWarehouses.length > 1
+          ? selectableWarehouses[1].id
+          : selectableWarehouses.firstOrNull?.id ?? '';
+    }
     if (_documents.every((document) => document.id != _selectedDocumentId)) {
       _selectedDocumentId = _documents.firstOrNull?.id;
     }
+  }
+
+  void _openBonSortieForm({BusinessDocument? document}) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider.value(value: _documentsCubit),
+                BlocProvider.value(value: _productsCubit),
+                BlocProvider.value(value: _warehouseCubit),
+                BlocProvider.value(value: _stockCubit),
+              ],
+              child: BonSortieFormPage(
+                company: _company,
+                nextNumber: _documentsCubit.nextNumber(DocumentType.bonSortie),
+                initialDocument: document,
+              ),
+            ),
+          ),
+        )
+        .then((saved) {
+          if (saved == true) {
+            _applyRepositoryState();
+            _showMessage(
+              document == null
+                  ? 'Sortie camion enregistrée en brouillon.'
+                  : 'Sortie camion mise à jour.',
+            );
+          }
+        });
   }
 
   void _reconcileSequences() {
@@ -811,6 +952,7 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
 
   void _focusQuantitySoon() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _quantityFocusNode.requestFocus();
       _quantityController.selection = TextSelection(
         baseOffset: 0,
@@ -1031,6 +1173,29 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
     return '"${safeCell.replaceAll('"', '""')}"';
   }
 
+  void _openProductForm({Product? product}) {
+    final productsCubit = _productsCubit;
+    final categoryCubit = _categoryCubit;
+    final warehouseCubit = _warehouseCubit;
+
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => MultiBlocProvider(
+              providers: [
+                BlocProvider<ProductsCubit>.value(value: productsCubit),
+                BlocProvider<CategoryCubit>.value(value: categoryCubit),
+                BlocProvider<WarehouseCubit>.value(value: warehouseCubit),
+              ],
+              child: ProductFormPage(product: product),
+            ),
+          ),
+        )
+        .then((saved) {
+          if (saved == true) _applyRepositoryState();
+        });
+  }
+
   @override
   Widget build(BuildContext context) => MultiBlocProvider(
     providers: [
@@ -1049,6 +1214,10 @@ class _InventoryHomePageState extends State<InventoryShellPage> {
       BlocProvider<OnboardingCubit>.value(value: _onboardingCubit),
       BlocProvider<SyncStatusCubit>.value(value: _syncStatusCubit),
     ],
-    child: _buildInventoryShell(),
+    child: CloudBootstrapGate(
+      tenantId: _tenantContext.selectedTenantId,
+      cloudBootstrapCubit: _cloudBootstrapCubit,
+      child: _buildInventoryShell(),
+    ),
   );
 }

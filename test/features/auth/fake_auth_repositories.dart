@@ -9,6 +9,7 @@ class FakeAuthRepository implements AuthRepository {
 
   AppUser? initialUser;
   String? loginFailure;
+  String? signupFailure;
   final controller = StreamController<AppUser?>.broadcast();
 
   bool loggedOut = false;
@@ -48,6 +49,9 @@ class FakeAuthRepository implements AuthRepository {
     required String displayName,
     required String companyName,
   }) async {
+    if (signupFailure != null) {
+      throw AuthRepositoryException(signupFailure!);
+    }
     initialUser = AppUser(id: 'user-1', email: email, displayName: displayName);
     controller.add(initialUser);
     return initialUser!;
@@ -72,6 +76,7 @@ class FakeTenantRepository implements TenantRepository {
   List<TenantMembership> memberships;
   TenantMembership? storedTenant;
   AppUser? storedUser;
+  String? createFailure;
 
   @override
   Future<List<TenantMembership>> loadMemberships(AppUser user) async {
@@ -83,6 +88,9 @@ class FakeTenantRepository implements TenantRepository {
     required AppUser user,
     required String companyName,
   }) async {
+    if (createFailure != null) {
+      throw AuthRepositoryException(createFailure!);
+    }
     final tenant = TenantMembership(
       tenantId: 'created-tenant',
       tenantName: companyName,

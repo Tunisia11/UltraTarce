@@ -46,16 +46,18 @@ class SubscriptionStatusRepository {
           status,
         );
         writePersistentValue('${subscriptionPlanStorageKey}_$tenantId', plan);
-        if (trialEnds != null)
+        if (trialEnds != null) {
           writePersistentValue(
             '${subscriptionTrialEndStorageKey}_$tenantId',
             trialEnds.toIso8601String(),
           );
-        if (periodEnds != null)
+        }
+        if (periodEnds != null) {
           writePersistentValue(
             '${subscriptionPeriodEndStorageKey}_$tenantId',
             periodEnds.toIso8601String(),
           );
+        }
 
         return SubscriptionStatusModel(
           status: status,

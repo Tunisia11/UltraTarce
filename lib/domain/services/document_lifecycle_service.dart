@@ -12,6 +12,15 @@ class DocumentLifecycleService {
     if (document.status == DocumentStatus.canceled) {
       return 'Validation bloquée. ${document.number} est annulé; créez un nouveau document si la vente doit repartir.';
     }
+    if (document.type == DocumentType.bonSortie) {
+      final target = document.metadata['targetWarehouseId'] as String?;
+      if (target == null || target.isEmpty) {
+        return 'Validation bloquée. Aucun dépôt de destination sélectionné pour le Bon de Sortie.';
+      }
+      if (target == document.warehouseId) {
+        return 'Validation bloquée. Le dépôt de départ et de destination doivent être différents.';
+      }
+    }
     return null;
   }
 
@@ -19,6 +28,10 @@ class DocumentLifecycleService {
     return document.type == DocumentType.bl ||
         (document.type == DocumentType.facture &&
             document.sourceNumber == null);
+  }
+
+  static bool validationRequiresTransferStock(BusinessDocument document) {
+    return document.type == DocumentType.bonSortie;
   }
 
   static bool validationRequiresInboundStock(BusinessDocument document) {
@@ -68,6 +81,8 @@ class DocumentLifecycleService {
         'Stock réservé visuellement ici, puis sorti à la validation du BL.',
       DocumentType.facture =>
         'Facture directe: le stock sortira à la validation de la facture.',
+      DocumentType.bonSortie =>
+        'Stock transféré vers le dépôt mobile à la validation.',
       _ => 'Le stock suit la règle du document au moment de la validation.',
     };
   }
@@ -91,6 +106,12 @@ class DocumentLifecycleService {
         '${document.number} validé. Aucun stock ne bouge sur un devis.',
       DocumentType.supplierOrder =>
         '${document.number} validé. Commande fournisseur sans mouvement de stock.',
+      DocumentType.bonSortie =>
+        document.status == DocumentStatus.closed
+            ? '${document.number} clôturé: stock mobile apuré.'
+            : document.status == DocumentStatus.partialReturn
+            ? '${document.number}: retour partiel enregistré.'
+            : '${document.number} validé. Stock transféré au camion avec succès.',
     };
   }
 
@@ -173,6 +194,7 @@ class DocumentLifecycleService {
     required CompanyProfile company,
     required bool applyTimbreFiscal,
     required double timbreFiscalAmount,
+    Map<String, dynamic> metadata = const {},
     String note = 'Vente préparée depuis Faire une vente.',
   }) {
     return BusinessDocument(
@@ -191,6 +213,7 @@ class DocumentLifecycleService {
       note: note,
       applyTimbreFiscal: applyTimbreFiscal,
       timbreFiscalAmount: timbreFiscalAmount,
+      metadata: metadata,
     );
   }
 

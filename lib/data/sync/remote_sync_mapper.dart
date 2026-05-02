@@ -6,10 +6,17 @@ import '../remote/remote_tables.dart';
 import 'sync_outbox_repository.dart';
 
 class RemoteSyncDependency {
-  const RemoteSyncDependency({required this.table, required this.id});
+  const RemoteSyncDependency({
+    required this.table,
+    required this.id,
+    required this.localEntityType,
+    required this.localId,
+  });
 
   final String table;
   final String id;
+  final String localEntityType;
+  final String localId;
 }
 
 class RemoteSyncWrite {
@@ -115,6 +122,7 @@ class RemoteSyncMapper {
           mutation.entityType,
           mappedPayload,
           tenantId,
+          payload,
         ),
       ),
     );
@@ -238,6 +246,7 @@ class RemoteSyncMapper {
         _stringValue(payload['address']),
         _stringValue(payload['city']),
       ]),
+      'type': _stringValue(payload['type']) ?? 'depot',
       'is_default': payload['isDefault'] == true,
       'is_active': _boolValue(payload['active'], fallback: true),
       'deleted_at': _boolValue(payload['active'], fallback: true)
@@ -344,16 +353,20 @@ class RemoteSyncMapper {
       'remaining_amount': totals.remainingAmount,
       'notes': _stringValue(payload['note']),
       'source_document_id': null,
-      'metadata': {
-        'partnerName': payload['partnerName'],
-        'partnerTaxId': payload['partnerTaxId'],
-        'partnerAddress': payload['partnerAddress'],
-        'warehouseId': payload['warehouseId'],
-        'sourceNumber': payload['sourceNumber'],
-        'stockApplied': payload['stockApplied'],
-        'applyTimbreFiscal': payload['applyTimbreFiscal'],
-        'companySnapshot': payload['companySnapshot'],
-      },
+      'warehouse_id': nullableRemoteIdFor(
+        tenantId,
+        'warehouses',
+        payload['warehouseId'],
+      ),
+      'source_number': _stringValue(payload['sourceNumber']),
+      'stock_applied': payload['stockApplied'] == true,
+      'apply_timbre_fiscal': payload['applyTimbreFiscal'] == true,
+      'company_snapshot': payload['companySnapshotJson'] != null
+          ? jsonDecode(payload['companySnapshotJson'])
+          : null,
+      'metadata': payload['metadataJson'] != null
+          ? jsonDecode(payload['metadataJson'])
+          : {},
     };
   }
 
@@ -484,35 +497,53 @@ class RemoteSyncMapper {
 
   List<RemoteSyncDependency> _dependenciesFor(
     String entityType,
-    Map<String, dynamic> payload,
+    Map<String, dynamic> remotePayload,
     String tenantId,
+    Map<String, dynamic> localPayload,
   ) {
     return switch (entityType) {
       'document_lines' => [
         RemoteSyncDependency(
           table: RemoteTables.documents,
-          id: payload['document_id'] as String,
+          id: remotePayload['document_id'] as String,
+          localEntityType: 'documents',
+          localId: _stringValue(localPayload['documentId']) ?? '',
         ),
+        if (remotePayload['product_id'] != null)
+          RemoteSyncDependency(
+            table: RemoteTables.products,
+            id: remotePayload['product_id'] as String,
+            localEntityType: 'products',
+            localId: _stringValue(localPayload['productId']) ?? '',
+          ),
       ],
       'payments' => [
         RemoteSyncDependency(
           table: RemoteTables.documents,
-          id: payload['document_id'] as String,
+          id: remotePayload['document_id'] as String,
+          localEntityType: 'documents',
+          localId: _stringValue(localPayload['documentId']) ?? '',
         ),
       ],
       'stock_movements' => [
         RemoteSyncDependency(
           table: RemoteTables.products,
-          id: payload['product_id'] as String,
+          id: remotePayload['product_id'] as String,
+          localEntityType: 'products',
+          localId: _stringValue(localPayload['productId']) ?? '',
         ),
         RemoteSyncDependency(
           table: RemoteTables.warehouses,
-          id: payload['warehouse_id'] as String,
+          id: remotePayload['warehouse_id'] as String,
+          localEntityType: 'warehouses',
+          localId: _stringValue(localPayload['warehouseId']) ?? '',
         ),
-        if (payload['source_document_id'] != null)
+        if (remotePayload['source_document_id'] != null)
           RemoteSyncDependency(
             table: RemoteTables.documents,
-            id: payload['source_document_id'] as String,
+            id: remotePayload['source_document_id'] as String,
+            localEntityType: 'documents',
+            localId: _stringValue(localPayload['sourceDocumentId']) ?? '',
           ),
       ],
       _ => const [],

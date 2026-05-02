@@ -1,0 +1,33 @@
+00:00 +0: loading /Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart                                                                                   00:01 +0: loading /Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart                                                                                   00:01 +0: Transfert blocks same source/destination                                                                                                                                                     00:02 +0: Transfert blocks same source/destination                                                                                                                                                     00:02 +0: Transfert blocks same source/destination                                                                                                                                                     
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.state (package:flutter_test/src/controller.dart:912:42)
+#2      WidgetTester.showKeyboard.<anonymous closure> (package:flutter_test/src/widget_tester.dart:1125:42)
+#5      TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#6      WidgetTester.showKeyboard (package:flutter_test/src/widget_tester.dart:1124:27)
+#7      WidgetTester.enterText.<anonymous closure> (package:flutter_test/src/widget_tester.dart:1160:13)
+#10     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#11     WidgetTester.enterText (package:flutter_test/src/widget_tester.dart:1159:27)
+#12     main.<anonymous closure> (file:///Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart:248:18)
+<asynchronous suspension>
+#13     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#14     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1059:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 5 frames from dart:async and package:stack_trace)
+
+The test description was:
+  Transfert blocks same source/destination
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +0 -1: Transfert blocks same source/destination [E]                                                                                                                                              
+  Test failed. See exception logs above.
+  The test description was: Transfert blocks same source/destination
+  
+
+To run this test again: /usr/local/flutter/bin/cache/dart-sdk/bin/dart test /Users/macbookair/ultra_trace/test/features/inventory/presentation/product_stock_actions_test.dart -p vm --plain-name 'Transfert blocks same source/destination'
+00:02 +0 -1: Some tests failed.                                                                                                                                                                        

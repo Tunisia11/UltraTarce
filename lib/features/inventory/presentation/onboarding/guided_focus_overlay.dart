@@ -80,7 +80,7 @@ extension _InventoryGuidedFocusOverlayFlow on _InventoryHomePageState {
         if (_hasFirstProduct) {
           _nextGuidedFocusStep();
         } else {
-          _showProductDialog();
+          _openProductForm();
         }
         break;
       case 1:

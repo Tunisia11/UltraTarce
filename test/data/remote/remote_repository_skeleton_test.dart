@@ -111,19 +111,59 @@ void main() {
     expect(forbiddenHits, isEmpty);
   });
 
-  test('Phase 7B pilot does not add remote pull sync', () {
-    final forbiddenHits = <String>[];
+  test('Phase 9B incremental pull sync follows security and safety rules', () {
+    final serviceRoleHits = <String>[];
+    final unsafeDeleteHits = <String>[];
+
     for (final file in Directory('lib').listSync(recursive: true)) {
       if (file is! File || !file.path.endsWith('.dart')) continue;
+      final path = file.path;
       final content = file.readAsStringSync();
-      if (content.contains('SyncPullService') ||
-          content.contains('pullRemote') ||
-          content.contains('pullUpdatedRows')) {
-        forbiddenHits.add(file.path);
+
+      // 1. No SUPABASE_SERVICE_ROLE_KEY/service_role usage in lib/
+      if (content.contains('SUPABASE_SERVICE_ROLE_KEY') ||
+          content.contains('service_role')) {
+        serviceRoleHits.add(path);
+      }
+
+      // 2. No remote pull code directly disables RLS
+      if (content.contains('disable_rls') || content.contains('bypass_rls')) {
+        serviceRoleHits.add('$path (potential RLS bypass)');
+      }
+
+      // 3. No destructive full local wipe is triggered automatically by incremental pull.
+      if (path.endsWith('local_cloud_import_service.dart')) {
+        // Look for customStatement('DELETE FROM ...') without WHERE
+        // Using \b word boundary to ensure we match the full table name
+        // and don't match sub-words that might trigger a false positive
+        // with the negative lookahead.
+        final deleteRegex = RegExp(
+          r'DELETE\s+FROM\s+\w+\b(?!\s+WHERE)',
+          caseSensitive: false,
+          multiLine: true,
+        );
+        if (deleteRegex.hasMatch(content)) {
+          unsafeDeleteHits.add(path);
+        }
+
+        if (content.contains('delete(') &&
+            !content.contains('where(') &&
+            content.contains('.go()')) {
+          unsafeDeleteHits.add('$path (potential unfiltered delete)');
+        }
       }
     }
 
-    expect(forbiddenHits, isEmpty);
+    expect(
+      serviceRoleHits,
+      isEmpty,
+      reason: 'Security violation: service_role or RLS bypass detected',
+    );
+    expect(
+      unsafeDeleteHits,
+      isEmpty,
+      reason: 'Safety violation: Unfiltered local delete detected in sync code',
+    );
   });
 
   test('remote table names match Phase 6 business schema', () {

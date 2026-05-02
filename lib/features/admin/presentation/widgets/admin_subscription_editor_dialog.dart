@@ -104,7 +104,7 @@ class _AdminSubscriptionEditorDialogState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: _status,
+              initialValue: _status,
               decoration: const InputDecoration(labelText: 'Statut'),
               items: const [
                 DropdownMenuItem(value: 'trial', child: Text('Essai')),
@@ -117,7 +117,7 @@ class _AdminSubscriptionEditorDialogState
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _plan,
+              initialValue: _plan,
               decoration: const InputDecoration(labelText: 'Plan'),
               items: const [
                 DropdownMenuItem(value: 'pilot', child: Text('Pilot')),
@@ -132,7 +132,7 @@ class _AdminSubscriptionEditorDialogState
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _billingCycle,
+              initialValue: _billingCycle,
               decoration: const InputDecoration(labelText: 'Cycle'),
               items: const [
                 DropdownMenuItem(value: 'monthly', child: Text('Mensuel')),

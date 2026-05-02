@@ -61,4 +61,26 @@ void main() {
     await cubit.close();
     await repo.close();
   });
+
+  test(
+    'registration success moves to authenticated state with company name',
+    () async {
+      final repo = FakeAuthRepository();
+      final cubit = AuthCubit(repo);
+
+      final user = await cubit.registerWithEmailPassword(
+        email: 'new@example.com',
+        password: 'password',
+        displayName: 'New User',
+        companyName: 'New Co',
+      );
+
+      expect(user?.email, 'new@example.com');
+      final state = cubit.state;
+      expect(state, isA<AuthAuthenticated>());
+      expect((state as AuthAuthenticated).registrationCompanyName, 'New Co');
+      await cubit.close();
+      await repo.close();
+    },
+  );
 }

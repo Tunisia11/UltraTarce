@@ -172,6 +172,45 @@ class StockCubit extends Cubit<StockState> {
     return result;
   }
 
+  StockMutationResult transferStockForDocument({
+    required BusinessDocument document,
+    required DateTime date,
+  }) {
+    final outcome = StockMutationService.applyTransferDocument(
+      products: _stockRepository.products,
+      document: document,
+      date: date,
+    );
+    if (!outcome.isSuccess) throw StateError(outcome.errorMessage!);
+    _stockRepository.applyStockMutation(
+      outcome.result!,
+      status: '${document.number}: stock transféré.',
+    );
+    loadStockOverview();
+    return outcome.result!;
+  }
+
+  StockMutationResult applySortieReturn({
+    required List<Product> products,
+    required BusinessDocument document,
+    required Map<String, int> returnedQuantities,
+    required DateTime date,
+  }) {
+    final outcome = StockMutationService.applySortieReturn(
+      products: products,
+      document: document,
+      returnedQuantities: returnedQuantities,
+      date: date,
+    );
+    if (!outcome.isSuccess) throw StateError(outcome.errorMessage!);
+    _stockRepository.applyStockMutation(
+      outcome.result!,
+      status: '${document.number}: retour stock effectué.',
+    );
+    loadStockOverview();
+    return outcome.result!;
+  }
+
   StockMutationOutcome reverseDocumentStock({
     required BusinessDocument document,
     required DateTime date,

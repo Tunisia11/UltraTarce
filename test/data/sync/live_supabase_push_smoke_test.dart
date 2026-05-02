@@ -11,6 +11,7 @@ import 'package:ultra_trace/data/sync/sync_outbox_repository.dart';
 import 'package:ultra_trace/data/sync/sync_outbox_service.dart';
 import 'package:ultra_trace/data/sync/sync_push_service.dart';
 import 'package:ultra_trace/data/sync/sync_remote_writer.dart';
+import 'package:ultra_trace/data/sync/sync_metadata_repository.dart';
 
 void main() {
   const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
@@ -89,6 +90,7 @@ void main() {
             clientOverride: client,
           ),
         ),
+        metadataRepository: SyncMetadataRepository(database),
       );
       addTearDown(outboxRepository.close);
       addTearDown(connectivity.dispose);

@@ -33,7 +33,7 @@ extension _InventoryPurchasesPage on _InventoryHomePageState {
                   title: 'Créer produit',
                   subtitle: 'Prix achat, TVA, stock',
                   done: !missingProduct,
-                  onTap: () => _showProductDialog(),
+                  onTap: () => _openProductForm(),
                 ),
               ],
             ),

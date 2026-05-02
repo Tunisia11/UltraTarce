@@ -264,6 +264,26 @@ class StockMutationService {
       );
     }
 
+    if (document.type == DocumentType.bonSortie) {
+      final targetWarehouseId =
+          document.metadata['targetWarehouseId'] as String?;
+      if (targetWarehouseId == null || targetWarehouseId.isEmpty) {
+        return const StockMutationOutcome.failure(
+          'Dépôt de destination non défini dans le document.',
+        );
+      }
+      // Reversing transfer: source is now the old target, target is now the old source
+      final reverseDoc = document.copyWith(
+        warehouseId: targetWarehouseId,
+        metadata: {'targetWarehouseId': document.warehouseId},
+      );
+      return applyTransferDocument(
+        products: products,
+        document: reverseDoc,
+        date: date,
+      );
+    }
+
     return StockMutationOutcome.success(
       StockMutationResult(
         products: List<Product>.from(products),
@@ -283,6 +303,8 @@ class StockMutationService {
     required String movementNumber,
     required DateTime date,
     required String Function(String sku, int index) serialGenerator,
+    String? reason,
+    String? note,
   }) {
     final product = _productById(products, productId);
     if (!product.stockTracked) {
@@ -359,6 +381,8 @@ class StockMutationService {
             quantity: quantity,
             warehouseId: warehouseId,
             serialNumbers: movementSerials,
+            reason: reason,
+            note: note,
           ),
         ],
       ),
@@ -374,6 +398,8 @@ class StockMutationService {
     required List<String> serialNumbers,
     required String movementNumber,
     required DateTime date,
+    String? reason,
+    String? note,
   }) {
     if (fromWarehouseId == toWarehouseId) {
       return const StockMutationOutcome.failure(
@@ -438,6 +464,8 @@ class StockMutationService {
             quantity: quantity,
             warehouseId: fromWarehouseId,
             serialNumbers: movedSerials,
+            reason: reason,
+            note: note,
           ),
           StockMovement(
             date: date,
@@ -448,8 +476,206 @@ class StockMutationService {
             quantity: quantity,
             warehouseId: toWarehouseId,
             serialNumbers: movedSerials,
+            reason: reason,
+            note: note,
           ),
         ],
+      ),
+    );
+  }
+
+  static StockMutationOutcome applyTransferDocument({
+    required List<Product> products,
+    required BusinessDocument document,
+    required DateTime date,
+  }) {
+    final targetWarehouseId = document.metadata['targetWarehouseId'] as String?;
+    if (targetWarehouseId == null || targetWarehouseId.isEmpty) {
+      return const StockMutationOutcome.failure(
+        'Dépôt de destination non défini dans le document.',
+      );
+    }
+    if (document.warehouseId == targetWarehouseId) {
+      return const StockMutationOutcome.failure(
+        'Les dépôts source et destination doivent être différents.',
+      );
+    }
+
+    final updatedProducts = List<Product>.from(products);
+    final processedLines = <DocumentLine>[];
+    final movements = <StockMovement>[];
+
+    for (final line in document.lines) {
+      final product = _productById(updatedProducts, line.productId);
+      if (!product.stockTracked) {
+        processedLines.add(line);
+        continue;
+      }
+
+      if (product.stockIn(document.warehouseId) < line.quantity) {
+        return StockMutationOutcome.failure(
+          'Stock insuffisant pour ${product.name} dans le dépôt source.',
+        );
+      }
+
+      final stock = Map<String, int>.from(product.stockByWarehouse);
+      final serials = _copySerials(product.serialsByWarehouse);
+
+      stock[document.warehouseId] =
+          (stock[document.warehouseId] ?? 0) - line.quantity;
+      stock[targetWarehouseId] =
+          (stock[targetWarehouseId] ?? 0) + line.quantity;
+
+      var movedSerials = <String>[];
+      if (product.serialTracked) {
+        final available = serials[document.warehouseId] ?? <String>[];
+        movedSerials = line.serialNumbers.length == line.quantity
+            ? List<String>.from(line.serialNumbers)
+            : available.take(line.quantity).toList();
+
+        serials[document.warehouseId] = available
+            .where((serial) => !movedSerials.contains(serial))
+            .toList();
+        serials[targetWarehouseId] = [
+          ...(serials[targetWarehouseId] ?? const <String>[]),
+          ...movedSerials,
+        ];
+      }
+
+      _replaceProduct(
+        updatedProducts,
+        product.copyWith(stockByWarehouse: stock, serialsByWarehouse: serials),
+      );
+
+      movements.add(
+        StockMovement(
+          date: date,
+          productId: product.id,
+          productName: product.name,
+          documentNumber: document.number,
+          sourceDocumentId: document.id,
+          direction: StockDirection.outbound,
+          quantity: line.quantity,
+          warehouseId: document.warehouseId,
+          serialNumbers: movedSerials,
+        ),
+      );
+      movements.add(
+        StockMovement(
+          date: date,
+          productId: product.id,
+          productName: product.name,
+          documentNumber: document.number,
+          sourceDocumentId: document.id,
+          direction: StockDirection.inbound,
+          quantity: line.quantity,
+          warehouseId: targetWarehouseId,
+          serialNumbers: movedSerials,
+        ),
+      );
+      processedLines.add(line.copyWith(serialNumbers: movedSerials));
+    }
+
+    return StockMutationOutcome.success(
+      StockMutationResult(
+        products: updatedProducts,
+        lines: processedLines,
+        movements: movements,
+      ),
+    );
+  }
+
+  static StockMutationOutcome applySortieReturn({
+    required List<Product> products,
+    required BusinessDocument document,
+    required Map<String, int> returnedQuantities,
+    required DateTime date,
+  }) {
+    final targetWarehouseId = document.metadata['targetWarehouseId'] as String?;
+    if (targetWarehouseId == null || targetWarehouseId.isEmpty) {
+      return const StockMutationOutcome.failure(
+        'Dépôt mobile non défini dans le document.',
+      );
+    }
+
+    final updatedProducts = List<Product>.from(products);
+    final movements = <StockMovement>[];
+
+    for (final entry in returnedQuantities.entries) {
+      final productId = entry.key;
+      final quantity = entry.value;
+      if (quantity <= 0) continue;
+
+      final product = _productById(updatedProducts, productId);
+      if (!product.stockTracked) continue;
+
+      if (product.stockIn(targetWarehouseId) < quantity) {
+        return StockMutationOutcome.failure(
+          'Stock insuffisant pour ${product.name} dans le dépôt mobile.',
+        );
+      }
+
+      final stock = Map<String, int>.from(product.stockByWarehouse);
+      final serials = _copySerials(product.serialsByWarehouse);
+
+      stock[targetWarehouseId] = (stock[targetWarehouseId] ?? 0) - quantity;
+      stock[document.warehouseId] =
+          (stock[document.warehouseId] ?? 0) + quantity;
+
+      // Simplified serial handling for returns: move first available
+      var movedSerials = <String>[];
+      if (product.serialTracked) {
+        final available = serials[targetWarehouseId] ?? <String>[];
+        movedSerials = available.take(quantity).toList();
+        serials[targetWarehouseId] = available
+            .where((serial) => !movedSerials.contains(serial))
+            .toList();
+        serials[document.warehouseId] = [
+          ...(serials[document.warehouseId] ?? const <String>[]),
+          ...movedSerials,
+        ];
+      }
+
+      _replaceProduct(
+        updatedProducts,
+        product.copyWith(stockByWarehouse: stock, serialsByWarehouse: serials),
+      );
+
+      movements.add(
+        StockMovement(
+          date: date,
+          productId: product.id,
+          productName: product.name,
+          documentNumber: document.number,
+          sourceDocumentId: document.id,
+          direction: StockDirection.outbound,
+          quantity: quantity,
+          warehouseId: targetWarehouseId,
+          serialNumbers: movedSerials,
+          reason: 'Retour sortie camion',
+        ),
+      );
+      movements.add(
+        StockMovement(
+          date: date,
+          productId: product.id,
+          productName: product.name,
+          documentNumber: document.number,
+          sourceDocumentId: document.id,
+          direction: StockDirection.inbound,
+          quantity: quantity,
+          warehouseId: document.warehouseId,
+          serialNumbers: movedSerials,
+          reason: 'Retour sortie camion',
+        ),
+      );
+    }
+
+    return StockMutationOutcome.success(
+      StockMutationResult(
+        products: updatedProducts,
+        lines: document.lines, // Lines stay same, metadata tracks returns
+        movements: movements,
       ),
     );
   }

@@ -63,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   final TenantContext tenantContext;
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -73,6 +73,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await _migrateToLocalSyncFoundation(migrator);
+      }
+      if (from < 4) {
+        await migrator.addColumn(documents, documents.metadataJson);
+        await migrator.addColumn(warehouses, warehouses.type);
       }
     },
     beforeOpen: (details) async {
@@ -139,9 +143,12 @@ class AppDatabase extends _$AppDatabase {
         tenant_id TEXT NOT NULL,
         entity_type TEXT NOT NULL,
         entity_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
         local_payload_json TEXT NULL,
         remote_payload_json TEXT NULL,
-        resolution TEXT NULL,
+        local_updated_at DATETIME NULL,
+        remote_updated_at DATETIME NULL,
+        status TEXT NOT NULL DEFAULT 'open',
         created_at DATETIME NOT NULL,
         resolved_at DATETIME NULL,
         resolved_by TEXT NULL

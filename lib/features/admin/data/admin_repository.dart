@@ -58,16 +58,17 @@ class AdminRepository {
 
     for (final s in subsRes) {
       final st = s['status'] as String?;
-      if (st == 'active')
+      if (st == 'active') {
         activeTenants++;
-      else if (st == 'trial')
+      } else if (st == 'trial') {
         trialTenants++;
-      else if (st == 'overdue')
+      } else if (st == 'overdue') {
         overdueTenants++;
-      else if (st == 'suspended')
+      } else if (st == 'suspended') {
         suspendedTenants++;
-      else if (st == 'cancelled')
+      } else if (st == 'cancelled') {
         cancelledTenants++;
+      }
     }
 
     return AdminOverview(
@@ -99,6 +100,9 @@ class AdminRepository {
     final errors = await _client
         .from('sync_errors')
         .select('tenant_id, status');
+    final conflicts = await _client
+        .from('sync_conflicts')
+        .select('tenant_id, status');
 
     final userEmailMap = {
       for (final u in users)
@@ -122,6 +126,9 @@ class AdminRepository {
       final eCount = errors
           .where((e) => e['tenant_id'] == tenantId && e['status'] != 'resolved')
           .length;
+      final cCount = conflicts
+          .where((c) => c['tenant_id'] == tenantId && c['status'] != 'resolved')
+          .length;
 
       DateTime? lastActivity;
       for (final doc in dList) {
@@ -143,6 +150,7 @@ class AdminRepository {
         productCount: pCount,
         documentCount: dList.length,
         syncErrorCount: eCount,
+        syncConflictCount: cCount,
         lastActivityDate: lastActivity,
         createdAt: DateTime.parse(t['created_at'] as String),
       );

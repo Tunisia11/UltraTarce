@@ -15,7 +15,7 @@ class AuthCubit extends Cubit<AuthState> {
   AuthRepository get repository => _authRepository;
 
   Future<void> initialize() async {
-    emit(const AuthLoading());
+    emit(const AuthInitializing());
     try {
       _listenToAuthChanges();
       final user = await _authRepository.initialize();
@@ -30,6 +30,10 @@ class AuthCubit extends Cubit<AuthState> {
         emit(AuthAuthenticated(user));
       }
     } catch (error) {
+      if (_isRefreshTokenError(error)) {
+        await logout();
+        return;
+      }
       emit(AuthFailure(_friendlyMessage(error)));
     }
   }
@@ -66,7 +70,7 @@ class AuthCubit extends Cubit<AuthState> {
         displayName: displayName,
         companyName: companyName,
       );
-      emit(AuthAuthenticated(user));
+      emit(AuthAuthenticated(user, registrationCompanyName: companyName));
       return user;
     } catch (error) {
       emit(AuthFailure(_friendlyMessage(error)));
@@ -104,7 +108,17 @@ class AuthCubit extends Cubit<AuthState> {
       if (user == null) {
         emit(const AuthUnauthenticated());
       } else {
-        emit(AuthAuthenticated(user));
+        final current = state;
+        final registrationCompanyName =
+            (current is AuthAuthenticated && current.user.id == user.id)
+            ? current.registrationCompanyName
+            : null;
+        emit(
+          AuthAuthenticated(
+            user,
+            registrationCompanyName: registrationCompanyName,
+          ),
+        );
       }
     });
   }
@@ -121,7 +135,16 @@ class AuthCubit extends Cubit<AuthState> {
     if (message.contains('already registered')) {
       return 'Un compte existe déjà avec cet email.';
     }
+    if (_isRefreshTokenError(error)) {
+      return 'Session expirée. Veuillez vous reconnecter.';
+    }
     return 'Opération impossible. Vérifiez les informations et réessayez.';
+  }
+
+  bool _isRefreshTokenError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('refresh_token_not_found') ||
+        message.contains('refresh token not found');
   }
 
   @override

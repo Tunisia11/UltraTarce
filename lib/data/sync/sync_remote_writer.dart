@@ -23,6 +23,12 @@ abstract class SyncRemoteWriter {
   Future<AppResult<void>> upsert(RemoteSyncWrite write);
 
   Future<AppResult<void>> softDelete(RemoteSyncWrite write);
+
+  Future<AppResult<Map<String, dynamic>?>> fetchRow({
+    required String table,
+    required String tenantId,
+    required String id,
+  });
 }
 
 class SupabaseSyncRemoteWriter implements SyncRemoteWriter {
@@ -136,6 +142,30 @@ class SupabaseSyncRemoteWriter implements SyncRemoteWriter {
       return AppFailure(
         _remoteError(error, 'Suppression distante impossible.'),
       );
+    }
+  }
+
+  @override
+  Future<AppResult<Map<String, dynamic>?>> fetchRow({
+    required String table,
+    required String tenantId,
+    required String id,
+  }) async {
+    final clientResult = _clientWithSession();
+    final clientError = clientResult.errorOrNull;
+    if (clientError != null) return AppFailure(clientError);
+    try {
+      final rows = await clientResult.valueOrNull!
+          .from(table)
+          .select()
+          .eq('tenant_id', tenantId)
+          .eq('id', id)
+          .limit(1);
+      final list = rows as List;
+      if (list.isEmpty) return const AppSuccess(null);
+      return AppSuccess(list.first as Map<String, dynamic>);
+    } catch (error) {
+      return AppFailure(_remoteError(error, 'Lecture distante impossible.'));
     }
   }
 

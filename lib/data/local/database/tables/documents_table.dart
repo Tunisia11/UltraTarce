@@ -35,6 +35,7 @@ class Documents extends Table {
   RealColumn get paidAmount => real().withDefault(const Constant(0))();
   RealColumn get remainingAmount => real().withDefault(const Constant(0))();
   TextColumn get companySnapshotJson => text().nullable()();
+  TextColumn get metadataJson => text().withDefault(const Constant('{}'))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get deletedAt => dateTime().nullable()();

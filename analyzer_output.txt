@@ -1,0 +1,13 @@
+Analyzing ultra_trace...                                        
+
+   info • Unnecessary use of multiple underscores • lib/features/inventory/presentation/products/product_form_page.dart:514:33 • unnecessary_underscores
+warning • The operand can't be 'null', so the condition is always 'true' • lib/features/inventory/presentation/products/product_form_page.dart:542:94 • unnecessary_null_comparison
+warning • Dead code • lib/features/inventory/presentation/products/product_form_page.dart:542:135 • dead_code
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/inventory/presentation/products/product_form_page.dart:594:21 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/inventory/presentation/products/product_form_page.dart:756:21 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/inventory/presentation/products/product_form_page.dart:772:21 • deprecated_member_use
+   info • Statements in an if should be enclosed in a block • lib/features/inventory/presentation/products/product_form_page.dart:795:25 • curly_braces_in_flow_control_structures
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/inventory/presentation/products/product_form_page.dart:993:52 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/inventory/presentation/products/product_form_page.dart:1122:25 • deprecated_member_use
+
+9 issues found. (ran in 2.0s)

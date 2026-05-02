@@ -100,6 +100,7 @@ class SyncOutboxRepository {
 
   final AppDatabase _database;
   final _changes = StreamController<void>.broadcast();
+  Stream<void> watchChanges() => _changes.stream;
 
   Future<void> transaction(Future<void> Function() action) {
     return _database.transaction(action);
@@ -192,6 +193,37 @@ class SyncOutboxRepository {
         )
         .get();
     return rows.map(_mutationFromRow).toList();
+  }
+
+  Future<SyncOutboxMutation?> findLatestMutation(
+    String tenantId,
+    String entityType,
+    String entityId,
+  ) async {
+    final rows = await _database
+        .customSelect(
+          '''
+          SELECT *
+          FROM sync_outbox
+          WHERE tenant_id = ?
+            AND entity_type = ?
+            AND entity_id = ?
+          ORDER BY updated_at DESC
+          LIMIT 1
+          ''',
+          variables: [
+            Variable.withString(tenantId),
+            Variable.withString(entityType),
+            Variable.withString(entityId),
+          ],
+        )
+        .get();
+    if (rows.isEmpty) return null;
+    return _mutationFromRow(rows.first);
+  }
+
+  Future<void> markPending(String id, {required String tenantId}) {
+    return _markStatus(id, tenantId: tenantId, status: 'pending');
   }
 
   Future<void> markProcessing(String id, {required String tenantId}) {
@@ -291,6 +323,73 @@ class SyncOutboxRepository {
     );
   }
 
+  Future<void> addConflict({
+    required String tenantId,
+    required String entityType,
+    required String entityId,
+    required String reason,
+    String? localPayload,
+    String? remotePayload,
+    DateTime? localUpdatedAt,
+    DateTime? remoteUpdatedAt,
+  }) async {
+    await _database.customStatement(
+      '''
+      INSERT OR REPLACE INTO sync_conflicts (
+        id,
+        tenant_id,
+        entity_type,
+        entity_id,
+        reason,
+        local_payload_json,
+        remote_payload_json,
+        local_updated_at,
+        remote_updated_at,
+        status,
+        created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)
+      ''',
+      [
+        '$entityType|$entityId|${DateTime.now().microsecondsSinceEpoch}',
+        tenantId,
+        entityType,
+        entityId,
+        reason,
+        localPayload,
+        remotePayload,
+        localUpdatedAt?.toUtc().toIso8601String(),
+        remoteUpdatedAt?.toUtc().toIso8601String(),
+        DateTime.now().toUtc().toIso8601String(),
+      ],
+    );
+    _changes.add(null);
+  }
+
+  Future<bool> hasPendingChanges(
+    String tenantId,
+    String entityType,
+    String entityId,
+  ) async {
+    final rows = await _database
+        .customSelect(
+          '''
+      SELECT count(*) as count
+      FROM sync_outbox
+      WHERE tenant_id = ?
+        AND entity_type = ?
+        AND entity_id = ?
+        AND status IN ('pending', 'failed', 'processing')
+      ''',
+          variables: [
+            Variable.withString(tenantId),
+            Variable.withString(entityType),
+            Variable.withString(entityId),
+          ],
+        )
+        .get();
+    return (rows.first.data['count'] as num? ?? 0) > 0;
+  }
+
   Future<void> close() async {
     await _changes.close();
   }
@@ -310,6 +409,71 @@ class SyncOutboxRepository {
         AND tenant_id = ?
       ''',
       [status, DateTime.now().toUtc().toIso8601String(), id, tenantId],
+    );
+    _changes.add(null);
+  }
+
+  Future<SyncOutboxMutation?> getPendingByEntity({
+    required String tenantId,
+    required String entityType,
+    required String entityId,
+  }) async {
+    final rows = await _database
+        .customSelect(
+          '''
+      SELECT * FROM sync_outbox 
+      WHERE tenant_id = ? AND entity_type = ? AND entity_id = ? 
+        AND status IN ('pending', 'failed', 'processing')
+      ORDER BY created_at DESC
+      ''',
+          variables: [
+            Variable.withString(tenantId),
+            Variable.withString(entityType),
+            Variable.withString(entityId),
+          ],
+        )
+        .get();
+    if (rows.isEmpty) return null;
+    return _mutationFromRow(rows.first);
+  }
+
+  Future<void> markStatusByEntity({
+    required String tenantId,
+    required String entityType,
+    required String entityId,
+    required String status,
+  }) async {
+    await _database.customStatement(
+      '''
+      UPDATE sync_outbox
+      SET status = ?,
+          updated_at = ?
+      WHERE tenant_id = ? AND entity_type = ? AND entity_id = ?
+        AND status != 'synced'
+      ''',
+      [
+        status,
+        DateTime.now().toUtc().toIso8601String(),
+        tenantId,
+        entityType,
+        entityId,
+      ],
+    );
+    _changes.add(null);
+  }
+
+  Future<void> deletePendingByEntity({
+    required String tenantId,
+    required String entityType,
+    required String entityId,
+  }) async {
+    await _database.customStatement(
+      '''
+      DELETE FROM sync_outbox
+      WHERE tenant_id = ? AND entity_type = ? AND entity_id = ?
+        AND status != 'synced'
+      ''',
+      [tenantId, entityType, entityId],
     );
     _changes.add(null);
   }

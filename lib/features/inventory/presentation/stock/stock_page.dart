@@ -389,6 +389,11 @@ extension _InventoryStockPage on _InventoryHomePageState {
               label: const Text('Corriger stock'),
             ),
             OutlinedButton.icon(
+              onPressed: () => _openBonSortieForm(),
+              icon: const Icon(Icons.local_shipping_outlined),
+              label: const Text('Sortie camion'),
+            ),
+            OutlinedButton.icon(
               onPressed: _showStockTransferDialog,
               icon: const Icon(Icons.swap_horiz),
               label: const Text('Transfert'),

@@ -52,11 +52,15 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
       DocumentStatus.draft => AppColors.warning,
       DocumentStatus.validated => AppColors.success,
       DocumentStatus.canceled => AppColors.danger,
+      DocumentStatus.partialReturn => AppColors.warning,
+      DocumentStatus.closed => AppColors.ink,
     };
     final title = switch (document.status) {
       DocumentStatus.draft => 'Brouillon modifiable',
       DocumentStatus.validated => 'Validé et verrouillé',
       DocumentStatus.canceled => 'Document annulé',
+      DocumentStatus.partialReturn => 'Retour partiel',
+      DocumentStatus.closed => 'Sortie clôturée',
     };
     final stockText = switch (document.type) {
       DocumentType.devis => 'Aucun stock ne bouge sur un devis.',
@@ -75,6 +79,10 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
         'Avoir validé: stock déjà réintégré.',
       DocumentType.creditNote => 'Stock sera réintégré à la validation.',
       DocumentType.supplierOrder => 'Commande fournisseur sans stock.',
+      DocumentType.bonSortie when document.stockApplied =>
+        'Sortie validée: stock déjà transféré vers ${_warehouseById(document.metadata['targetWarehouseId'] ?? '').name}.',
+      DocumentType.bonSortie =>
+        'Transfert stock: stock sera déplacé à la validation.',
     };
     final paymentText = document.type == DocumentType.facture
         ? ' Paiement: ${_effectivePaymentStatus(document).label}, reste ${formatMoney(_invoiceRemainingDue(document))}.'
@@ -127,6 +135,7 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         LogoImage(
+                          key: ValueKey('${company.logoSource}_$_logoVersion'),
                           source: company.logoSource,
                           fallbackText: company.name,
                           size: 58,
@@ -187,12 +196,48 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
                 spacing: 18,
                 runSpacing: 8,
                 children: [
-                  PreviewInfo(label: 'Tiers', value: document.partnerName),
-                  PreviewInfo(
-                    label: 'Matricule fiscal',
-                    value: document.partnerTaxId,
-                  ),
-                  PreviewInfo(label: 'Adresse', value: document.partnerAddress),
+                  if (document.type == DocumentType.bonSortie) ...[
+                    PreviewInfo(
+                      label: 'Dépôt mobile',
+                      value: _warehouseById(
+                        document.metadata['targetWarehouseId'] ?? '',
+                      ).name,
+                    ),
+                    if (document.metadata['driverName']
+                            ?.toString()
+                            .isNotEmpty ??
+                        false)
+                      PreviewInfo(
+                        label: 'Chauffeur',
+                        value: document.metadata['driverName'],
+                      ),
+                    if (document.metadata['vehiclePlate']
+                            ?.toString()
+                            .isNotEmpty ??
+                        false)
+                      PreviewInfo(
+                        label: 'Véhicule',
+                        value: document.metadata['vehiclePlate'],
+                      ),
+                    if (document.metadata['destination']
+                            ?.toString()
+                            .isNotEmpty ??
+                        false)
+                      PreviewInfo(
+                        label: 'Zone',
+                        value: document.metadata['destination'],
+                      ),
+                  ] else ...[
+                    PreviewInfo(label: 'Tiers', value: document.partnerName),
+                    PreviewInfo(
+                      label: 'Matricule fiscal',
+                      value: document.partnerTaxId,
+                    ),
+                    PreviewInfo(
+                      label: 'Adresse',
+                      value: document.partnerAddress,
+                    ),
+                  ],
                   PreviewInfo(
                     label: 'Magasin',
                     value: _warehouseById(document.warehouseId).name,
@@ -210,6 +255,29 @@ extension _InventoryDocumentDetailPage on _InventoryHomePageState {
               _buildDocumentSafetyBanner(document),
               const SizedBox(height: 18),
               PreviewLines(lines: document.lines),
+              if (document.type == DocumentType.bonSortie &&
+                  document.returnedQuantities.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'Suivi des retours',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 8),
+                for (final line in document.lines)
+                  if ((document.returnedQuantities[line.productId] ?? 0) > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(line.label)),
+                          Text(
+                            'Retourné: ${document.returnedQuantities[line.productId]} / ${line.quantity}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+              ],
               const SizedBox(height: 16),
               Align(
                 alignment: Alignment.centerRight,

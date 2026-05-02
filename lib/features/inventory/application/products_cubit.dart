@@ -4,6 +4,7 @@ import '../../../core/result/app_result.dart';
 import '../../../data/repositories/audit_repository.dart';
 import '../../../data/repositories/product_repository.dart';
 import '../../../data/repositories/stock_repository.dart';
+import '../../../domain/app_enums.dart';
 import '../../../domain/app_models.dart';
 import '../../../domain/services/audit_service.dart';
 import '../../../domain/services/stock_mutation_service.dart';
@@ -248,6 +249,96 @@ class ProductsCubit extends Cubit<ProductsState> {
 
   List<Product> getLowStockProducts() {
     return StockMutationService.lowStockProducts(_productRepository.getAll());
+  }
+
+  AppSnapshot adjustStock({
+    required String productId,
+    required String warehouseId,
+    required int quantity,
+    required StockDirection direction,
+    String? reason,
+    String? note,
+    required String movementNumber,
+    required String Function(String sku, int index) serialGenerator,
+  }) {
+    final outcome = StockMutationService.applyAdjustment(
+      products: _productRepository.getAll(),
+      productId: productId,
+      warehouseId: warehouseId,
+      direction: direction,
+      quantity: quantity,
+      serialNumbers: const [],
+      movementNumber: movementNumber,
+      date: DateTime.now(),
+      serialGenerator: serialGenerator,
+      reason: reason,
+      note: note,
+    );
+    if (!outcome.isSuccess) {
+      throw StateError(outcome.errorMessage!);
+    }
+
+    final snapshot = _stockRepository.applyStockMutation(
+      outcome.result!,
+      status: 'Mouvement de stock enregistré.',
+    );
+    final product = outcome.result!.products.firstWhere(
+      (p) => p.id == productId,
+    );
+    _appendAudit(
+      action: 'Mouvement stock',
+      target: product.sku,
+      detail:
+          '${product.name} · ${direction == StockDirection.inbound ? 'Entrée' : 'Sortie'} $quantity · $reason',
+    );
+    loadProducts();
+    return snapshot;
+  }
+
+  AppSnapshot transferStock({
+    required String productId,
+    required String fromWarehouseId,
+    required String toWarehouseId,
+    required int quantity,
+    String? reason,
+    String? note,
+    required String movementNumber,
+  }) {
+    final outcome = StockMutationService.applyTransfer(
+      products: _productRepository.getAll(),
+      productId: productId,
+      fromWarehouseId: fromWarehouseId,
+      toWarehouseId: toWarehouseId,
+      quantity: quantity,
+      serialNumbers: const [],
+      movementNumber: movementNumber,
+      date: DateTime.now(),
+      reason: reason,
+      note: note,
+    );
+    if (!outcome.isSuccess) {
+      throw StateError(outcome.errorMessage!);
+    }
+
+    final snapshot = _stockRepository.applyStockMutation(
+      outcome.result!,
+      status: 'Transfert de stock enregistré.',
+    );
+    final product = outcome.result!.products.firstWhere(
+      (p) => p.id == productId,
+    );
+    _appendAudit(
+      action: 'Transfert stock',
+      target: product.sku,
+      detail:
+          '${product.name} · $quantity de $fromWarehouseId vers $toWarehouseId',
+    );
+    loadProducts();
+    return snapshot;
+  }
+
+  List<StockMovement> getMovementsForProduct(String productId) {
+    return _stockRepository.movementsForProduct(productId);
   }
 
   AppSnapshot _appendAudit({

@@ -25,10 +25,11 @@ class StockMapper {
       warehouseId: Value(TenantRowScope.rowId(tenantId, movement.warehouseId)),
       quantityDelta: Value(quantityDelta),
       type: Value(movement.direction.name),
-      reason: Value(movement.documentNumber),
+      reason: Value(movement.reason ?? movement.documentNumber),
       direction: Value(movement.direction.name),
       documentNumber: Value(movement.documentNumber),
       createdAt: Value(movement.date),
+      note: Value(movement.note),
       serialNumbersJson: Value(jsonEncode(movement.serialNumbers)),
     );
   }
@@ -54,6 +55,8 @@ class StockMapper {
       serialNumbers: List<String>.from(
         jsonDecode(row.serialNumbersJson) as List? ?? const [],
       ),
+      reason: row.reason,
+      note: row.note,
     );
   }
 

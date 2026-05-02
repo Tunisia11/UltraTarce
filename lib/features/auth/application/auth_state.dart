@@ -8,6 +8,10 @@ class AuthInitial extends AuthState {
   const AuthInitial();
 }
 
+class AuthInitializing extends AuthState {
+  const AuthInitializing();
+}
+
 class AuthLoading extends AuthState {
   const AuthLoading();
 }
@@ -19,9 +23,10 @@ class AuthUnauthenticated extends AuthState {
 }
 
 class AuthAuthenticated extends AuthState {
-  const AuthAuthenticated(this.user);
+  const AuthAuthenticated(this.user, {this.registrationCompanyName});
 
   final AppUser user;
+  final String? registrationCompanyName;
 }
 
 class AuthFailure extends AuthState {

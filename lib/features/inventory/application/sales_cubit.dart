@@ -214,6 +214,7 @@ class SalesCubit extends Cubit<SalesState> {
     required DateTime date,
     required List<DocumentLine> lines,
     required String warehouseId,
+    Map<String, dynamic> metadata = const {},
     bool isUpdate = false,
   }) {
     final document = DocumentLifecycleService.buildSalesDocument(
@@ -228,6 +229,7 @@ class SalesCubit extends Cubit<SalesState> {
       applyTimbreFiscal:
           type == DocumentType.facture && company.timbreFiscalEnabled,
       timbreFiscalAmount: company.timbreFiscalAmount,
+      metadata: metadata,
     );
     _documentRepository.upsert(
       document,

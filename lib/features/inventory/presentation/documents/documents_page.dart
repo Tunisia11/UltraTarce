@@ -279,6 +279,15 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
         label: const Text('Encaisser'),
       );
     }
+    if (document.type == DocumentType.bonSortie &&
+        (document.status == DocumentStatus.validated ||
+            document.status == DocumentStatus.partialReturn)) {
+      return ElevatedButton.icon(
+        onPressed: () => _showSortieReturnDialog(document),
+        icon: const Icon(Icons.undo_outlined, size: 16),
+        label: const Text('Retour'),
+      );
+    }
     return OutlinedButton.icon(
       onPressed: _pdfExportInProgress
           ? null
@@ -405,6 +414,32 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
         );
       }
     }
+    if (document.type == DocumentType.bonSortie &&
+        document.status != DocumentStatus.canceled &&
+        document.status != DocumentStatus.closed) {
+      if (document.status == DocumentStatus.draft) {
+        // Validation handled by generic draft section above
+      } else {
+        buttons.add(
+          OutlinedButton.icon(
+            onPressed: () => _showSortieReturnDialog(document),
+            icon: const Icon(Icons.undo_outlined, size: 16),
+            label: const Text('Retour produits'),
+          ),
+        );
+        buttons.add(
+          ElevatedButton.icon(
+            onPressed: () => _closeSortieWorkflow(document),
+            icon: const Icon(Icons.check_circle_outlined, size: 16),
+            label: const Text('Clôturer'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryContainer,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        );
+      }
+    }
     if (document.status != DocumentStatus.canceled) {
       final cancelBlockReason = _cancelBlockReason(document);
       buttons.add(
@@ -463,6 +498,13 @@ extension _InventoryDocumentsPage on _InventoryHomePageState {
         return const SmallChip(label: 'Validé', color: AppColors.success);
       case DocumentStatus.canceled:
         return const SmallChip(label: 'Annulé', color: AppColors.danger);
+      case DocumentStatus.partialReturn:
+        return const SmallChip(
+          label: 'Retour partiel',
+          color: AppColors.warning,
+        );
+      case DocumentStatus.closed:
+        return const SmallChip(label: 'Clôturé', color: AppColors.ink);
     }
   }
 

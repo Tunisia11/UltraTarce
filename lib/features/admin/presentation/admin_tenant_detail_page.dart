@@ -129,8 +129,9 @@ class AdminTenantDetailPage extends StatelessWidget {
 
   Widget _buildSubscriptionCard(AdminTenantDetail detail) {
     final sub = detail.subscriptionInfo;
-    if (sub == null)
+    if (sub == null) {
       return const Text('Aucun abonnement configuré (Mode Pilot par défaut).');
+    }
 
     return Card(
       elevation: 0,

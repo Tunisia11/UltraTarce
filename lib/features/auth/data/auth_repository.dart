@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -131,21 +132,68 @@ class SupabaseAuthRepository implements AuthRepository {
       _devAuthController.add(_devUser);
       return _devUser!;
     }
-    final response = await _requireClient().auth.signUp(
-      email: email.trim(),
-      password: password,
-      data: {
-        'full_name': displayName.trim(),
-        'company_name': companyName.trim(),
-      },
-    );
-    final user = _mapUser(response.user);
-    if (user == null) {
+    try {
+      final response = await _requireClient().auth.signUp(
+        email: email.trim(),
+        password: password,
+        data: {
+          'full_name': displayName.trim(),
+          'company_name': companyName.trim(),
+        },
+      );
+
+      if (response.session == null && response.user != null) {
+        throw const AuthRepositoryException(
+          'Compte créé. Vérifiez votre email pour confirmer le compte avant de continuer.',
+        );
+      }
+
+      final user = _mapUser(response.user);
+      if (user == null) {
+        throw const AuthRepositoryException(
+          'Création du compte impossible. Vérifiez les informations et réessayez.',
+        );
+      }
+      return user;
+    } on AuthException catch (e) {
+      // Log for dev info
+      debugPrint('Supabase AuthException: ${e.statusCode} ${e.message}');
+
+      final msg = e.message.toLowerCase();
+      if (e.statusCode == '429' || msg.contains('rate limit')) {
+        throw const AuthRepositoryException(
+          'Trop de tentatives. Attendez quelques minutes puis réessayez.',
+        );
+      }
+      if (msg.contains('already registered') || e.statusCode == '422') {
+        throw const AuthRepositoryException(
+          'Cet email est déjà utilisé. Connectez-vous ou utilisez un autre email.',
+        );
+      }
+      if (msg.contains('password')) {
+        throw const AuthRepositoryException(
+          'Mot de passe invalide. Utilisez au moins 6 caractères.',
+        );
+      }
+      if (msg.contains('invalid email')) {
+        throw const AuthRepositoryException('Email invalide.');
+      }
       throw const AuthRepositoryException(
-        'Compte créé. Vérifiez votre email avant de vous connecter.',
+        'Création du compte impossible. Vérifiez les informations et réessayez.',
+      );
+    } on PostgrestException catch (e) {
+      debugPrint(
+        'Supabase PostgrestException: ${e.message} ${e.details} ${e.hint}',
+      );
+      throw const AuthRepositoryException(
+        'Création du compte impossible. Vérifiez les informations et réessayez.',
+      );
+    } catch (e) {
+      debugPrint('Unknown exception during signup: $e');
+      throw const AuthRepositoryException(
+        'Création du compte impossible. Vérifiez les informations et réessayez.',
       );
     }
-    return user;
   }
 
   @override

@@ -282,13 +282,38 @@ extension _InventoryDocumentExportActions on _InventoryHomePageState {
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(
-                      'Tiers',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                    ),
-                    pw.Text(document.partnerName),
-                    pw.Text('MF: ${document.partnerTaxId}'),
-                    pw.Text(document.partnerAddress),
+                    if (document.type == DocumentType.bonSortie) ...[
+                      pw.Text(
+                        'Destination',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.Text(
+                        _warehouseById(
+                          document.metadata['targetWarehouseId'] ?? '',
+                        ).name,
+                        style: pw.TextStyle(
+                          fontSize: 14,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      if (document.metadata['destination']
+                              ?.toString()
+                              .isNotEmpty ??
+                          false)
+                        pw.Text('Zone: ${document.metadata['destination']}'),
+                      pw.Text(
+                        'Transfert interne vers unité mobile',
+                        style: const pw.TextStyle(fontSize: 10),
+                      ),
+                    ] else ...[
+                      pw.Text(
+                        'Tiers',
+                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                      ),
+                      pw.Text(document.partnerName),
+                      pw.Text('MF: ${document.partnerTaxId}'),
+                      pw.Text(document.partnerAddress),
+                    ],
                   ],
                 ),
               ),
@@ -301,6 +326,16 @@ extension _InventoryDocumentExportActions on _InventoryHomePageState {
                       style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                     ),
                     pw.Text('Dépôt: ${warehouse.name}'),
+                    if (document.metadata['driverName']
+                            ?.toString()
+                            .isNotEmpty ??
+                        false)
+                      pw.Text('Chauffeur: ${document.metadata['driverName']}'),
+                    if (document.metadata['vehiclePlate']
+                            ?.toString()
+                            .isNotEmpty ??
+                        false)
+                      pw.Text('Véhicule: ${document.metadata['vehiclePlate']}'),
                     if (document.sourceNumber != null)
                       pw.Text('Origine: ${document.sourceNumber}'),
                   ],

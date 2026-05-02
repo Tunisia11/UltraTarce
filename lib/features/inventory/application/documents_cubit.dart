@@ -247,6 +247,56 @@ class DocumentsCubit extends Cubit<DocumentsState> {
     return snapshot;
   }
 
+  AppSnapshot registerSortieReturn({
+    required BusinessDocument document,
+    required Map<String, int> returnedQuantities,
+    required DateTime date,
+    String? note,
+  }) {
+    final updated = ReturnService.registerSortieReturn(
+      document: document,
+      returnedQuantities: returnedQuantities,
+      date: date,
+      note: note,
+    );
+    _documentRepository.upsert(
+      updated,
+      status: '${document.number}: retour enregistré.',
+    );
+    final count = returnedQuantities.values.fold(0, (sum, q) => sum + q);
+    final snapshot = _appendAudit(
+      action: 'Retour sortie',
+      target: document.number,
+      detail: '$count produit(s) réintégrés au dépôt.',
+    );
+    loadDocuments();
+    return snapshot;
+  }
+
+  AppSnapshot closeSortie({
+    required BusinessDocument document,
+    required DateTime date,
+  }) {
+    final updated = ReturnService.closeSortie(document: document, date: date);
+    _documentRepository.upsert(updated, status: '${document.number} clôturé.');
+
+    // Calculate total delivered (total sortie - total returned)
+    final returns = updated.returnedQuantities;
+    var totalDelivered = 0;
+    for (final line in updated.lines) {
+      final returned = returns[line.productId] ?? 0;
+      totalDelivered += (line.quantity - returned);
+    }
+
+    final snapshot = _appendAudit(
+      action: 'Clôture sortie',
+      target: document.number,
+      detail: '$totalDelivered produits vendus/livrés.',
+    );
+    loadDocuments();
+    return snapshot;
+  }
+
   AppSnapshot cancelDocument(BusinessDocument document) {
     final canceled = DocumentLifecycleService.markCanceled(document);
     _documentRepository.upsert(

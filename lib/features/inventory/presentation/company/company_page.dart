@@ -286,6 +286,7 @@ extension _InventoryCompanyPage on _InventoryHomePageState {
       child: Column(
         children: [
           LogoImage(
+            key: ValueKey('${source}_$_logoVersion'),
             source: source,
             fallbackText: _companyNameController.text,
             size: 112,

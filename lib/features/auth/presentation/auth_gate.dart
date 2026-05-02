@@ -73,14 +73,21 @@ class _AuthGateState extends State<AuthGate> {
       child: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
-            _tenantCubit.loadMemberships(state.user);
+            if (state.registrationCompanyName != null) {
+              _tenantCubit.createFirstTenant(
+                user: state.user,
+                companyName: state.registrationCompanyName!,
+              );
+            } else {
+              _tenantCubit.loadMemberships(state.user);
+            }
           } else if (state is AuthUnauthenticated) {
             _tenantCubit.clearSelection();
           }
         },
         child: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) {
-            if (state is AuthLoading || state is AuthInitial) {
+            if (state is AuthInitializing || state is AuthInitial) {
               return const _AuthLoadingView(
                 message: 'Préparation du compte...',
               );
@@ -95,7 +102,7 @@ class _AuthGateState extends State<AuthGate> {
               );
             }
             if (state is AuthFailure) {
-              return _buildAuthPage(message: state.message, enabled: false);
+              return _buildAuthPage(message: state.message, enabled: true);
             }
             final message = state is AuthUnauthenticated ? state.message : null;
             return _buildAuthPage(message: message);
@@ -115,6 +122,8 @@ class _AuthGateState extends State<AuthGate> {
             setState(() => _mode = _AuthPageMode.forgotPassword),
       ),
       _AuthPageMode.register => RegisterPage(
+        message: message,
+        enabled: enabled && _config.configurationWarning == null,
         onShowLogin: () => setState(() => _mode = _AuthPageMode.login),
       ),
       _AuthPageMode.forgotPassword => ForgotPasswordPage(
@@ -149,6 +158,7 @@ class _TenantGate extends StatelessWidget {
             user: user,
             memberships: const [],
             message: state.message,
+            companyName: state.companyName,
             onSelectTenant: (_) {},
             onCreateTenant: (name) => context
                 .read<TenantCubit>()

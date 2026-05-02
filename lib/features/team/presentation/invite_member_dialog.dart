@@ -52,7 +52,7 @@ class _InviteMemberDialogState extends State<InviteMemberDialog> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedRole,
+              initialValue: _selectedRole,
               decoration: const InputDecoration(
                 labelText: 'Rôle',
                 prefixIcon: Icon(Icons.badge_outlined),

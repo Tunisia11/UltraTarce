@@ -15,6 +15,8 @@ import 'package:ultra_trace/data/sync/sync_push_service.dart';
 import 'package:ultra_trace/data/sync/sync_remote_writer.dart';
 import 'package:ultra_trace/data/sync/sync_status.dart';
 import 'package:ultra_trace/data/sync/sync_status_cubit.dart';
+import 'package:ultra_trace/data/sync/sync_metadata_repository.dart';
+import 'package:ultra_trace/data/sync/sync_conflict_repository.dart';
 import 'package:ultra_trace/storage/app_storage.dart';
 
 void main() {
@@ -49,11 +51,14 @@ void main() {
       connectivityService: connectivity,
       tenantContext: tenantContext,
       remoteWriter: remote,
+      metadataRepository: SyncMetadataRepository(database),
     );
+    final conflictRepository = SyncConflictRepository(database);
     final cubit = SyncStatusCubit(
       outboxRepository: outboxRepository,
       connectivityService: connectivity,
       tenantContext: tenantContext,
+      conflictRepository: conflictRepository,
     )..start();
     addTearDown(cubit.close);
     addTearDown(connectivity.dispose);
@@ -129,6 +134,15 @@ class _StatusFakeRemoteWriter implements SyncRemoteWriter {
     required String number,
   }) async {
     return const AppSuccess<Map<String, dynamic>?>(null);
+  }
+
+  @override
+  Future<AppResult<Map<String, dynamic>?>> fetchRow({
+    required String table,
+    required String tenantId,
+    required String id,
+  }) async {
+    return const AppSuccess(null);
   }
 }
 

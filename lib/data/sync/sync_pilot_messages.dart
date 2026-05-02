@@ -31,6 +31,8 @@ class SyncPilotMessages {
       RemoteErrorCodes.authMissing => 'Connectez-vous pour synchroniser.',
       RemoteErrorCodes.missingSupabaseConfig =>
         'Connexion cloud non configurée.',
+      RemoteErrorCodes.dependencyMissing =>
+        'Impossible de synchroniser le mouvement de stock: dépôt ou produit manquant.',
       _ => 'Synchronisation échouée. Les données locales sont conservées.',
     };
   }

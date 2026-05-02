@@ -104,4 +104,55 @@ class ReturnService {
       note: note.isEmpty ? 'Retour client lié à ${invoice.number}.' : note,
     );
   }
+
+  static BusinessDocument registerSortieReturn({
+    required BusinessDocument document,
+    required Map<String, int> returnedQuantities,
+    required DateTime date,
+    String? note,
+  }) {
+    if (document.type != DocumentType.bonSortie) {
+      throw StateError('Ce document n’est pas un Bon de Sortie.');
+    }
+
+    final currentReturns = Map<String, int>.from(document.returnedQuantities);
+    for (final entry in returnedQuantities.entries) {
+      currentReturns[entry.key] =
+          (currentReturns[entry.key] ?? 0) + entry.value;
+    }
+
+    // Determine status
+    var totalReturned = 0;
+    for (final line in document.lines) {
+      totalReturned += currentReturns[line.productId] ?? 0;
+    }
+
+    final status = totalReturned > 0
+        ? DocumentStatus.partialReturn
+        : DocumentStatus.validated;
+
+    return document.copyWith(
+      status: status,
+      metadata: {
+        ...document.metadata,
+        'returnedQuantities': currentReturns,
+        'lastReturnDate': date.toIso8601String(),
+        if (note != null && note.isNotEmpty) 'lastReturnNote': note,
+      },
+    );
+  }
+
+  static BusinessDocument closeSortie({
+    required BusinessDocument document,
+    required DateTime date,
+  }) {
+    if (document.type != DocumentType.bonSortie) {
+      throw StateError('Ce document n’est pas un Bon de Sortie.');
+    }
+
+    return document.copyWith(
+      status: DocumentStatus.closed,
+      metadata: {...document.metadata, 'closedAt': date.toIso8601String()},
+    );
+  }
 }

@@ -165,7 +165,7 @@ extension _InventoryProductCatalogueCard on _InventoryHomePageState {
                       runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
-                          onPressed: () => _showProductDialog(product),
+                          onPressed: () => _openProductForm(product: product),
                           icon: const Icon(Icons.edit_outlined, size: 16),
                           label: const Text('Modifier'),
                         ),

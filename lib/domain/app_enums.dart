@@ -106,7 +106,15 @@ extension CustomerTypeDetails on CustomerType {
       this == CustomerType.particulier ? 'Particulier' : 'Entreprise';
 }
 
-enum DocumentType { devis, bl, facture, creditNote, supplierOrder, stockEntry }
+enum DocumentType {
+  devis,
+  bl,
+  facture,
+  creditNote,
+  supplierOrder,
+  stockEntry,
+  bonSortie,
+}
 
 extension DocumentTypeDetails on DocumentType {
   String get label {
@@ -123,6 +131,8 @@ extension DocumentTypeDetails on DocumentType {
         return 'Bon de commande fournisseur';
       case DocumentType.stockEntry:
         return "Bon d'entrée";
+      case DocumentType.bonSortie:
+        return 'Bon de sortie';
     }
   }
 
@@ -140,6 +150,8 @@ extension DocumentTypeDetails on DocumentType {
         return 'Commande';
       case DocumentType.stockEntry:
         return "Entrée";
+      case DocumentType.bonSortie:
+        return "Sortie Camion";
     }
   }
 
@@ -157,11 +169,13 @@ extension DocumentTypeDetails on DocumentType {
         return 'BCF';
       case DocumentType.stockEntry:
         return 'BE';
+      case DocumentType.bonSortie:
+        return 'BS';
     }
   }
 }
 
-enum DocumentStatus { draft, validated, canceled }
+enum DocumentStatus { draft, validated, partialReturn, closed, canceled }
 
 extension DocumentStatusDetails on DocumentStatus {
   String get label {
@@ -170,6 +184,10 @@ extension DocumentStatusDetails on DocumentStatus {
         return 'Brouillon';
       case DocumentStatus.validated:
         return 'Validé';
+      case DocumentStatus.partialReturn:
+        return 'Retour partiel';
+      case DocumentStatus.closed:
+        return 'Clôturé';
       case DocumentStatus.canceled:
         return 'Annulé';
     }

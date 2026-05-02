@@ -33,7 +33,8 @@ class TenantEmpty extends TenantState {
 }
 
 class TenantFailure extends TenantState {
-  const TenantFailure(this.message);
+  const TenantFailure(this.message, {this.companyName});
 
   final String message;
+  final String? companyName;
 }

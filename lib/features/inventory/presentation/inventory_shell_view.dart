@@ -293,8 +293,15 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
                 ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.arrow_drop_down, size: 18),
-                  tooltip: 'Options de synchronisation',
                   itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'pull',
+                      child: Text('Télécharger les changements cloud'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'conflicts',
+                      child: Text('Voir les conflits de synchronisation'),
+                    ),
                     const PopupMenuItem(
                       value: 'repair',
                       child: Text(SyncPilotMessages.repairSyncActionLabel),
@@ -303,6 +310,10 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
                   onSelected: (value) {
                     if (value == 'repair') {
                       _triggerRepairSync();
+                    } else if (value == 'pull') {
+                      _triggerPullSync();
+                    } else if (value == 'conflicts') {
+                      _openConflictsPage();
                     }
                   },
                 ),
@@ -358,10 +369,26 @@ extension _InventoryShellPageUi on _InventoryHomePageState {
     return switch (state) {
       SyncOffline() => AppColors.subtle,
       SyncFailed() => AppColors.danger,
-      SyncProcessing() => AppColors.cyan,
+      SyncProcessing() || SyncPulling() => AppColors.cyan,
       SyncPending() => AppColors.warning,
       SyncSynced() || SyncIdle() => AppColors.emerald,
     };
+  }
+
+  void _triggerPullSync() {
+    _syncStatusCubit.pullIncremental();
+  }
+
+  void _openConflictsPage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SyncConflictsPage(
+          conflictRepository: _syncConflictRepository,
+          conflictService: _syncConflictService,
+          tenantId: _tenantContext.selectedTenantId,
+        ),
+      ),
+    );
   }
 
   Widget _buildSystemLogoTile({double width = 68, double height = 44}) {

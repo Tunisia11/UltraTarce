@@ -11,6 +11,7 @@ class Warehouses extends Table {
   TextColumn get city => text().withDefault(const Constant(''))();
   TextColumn get address => text().withDefault(const Constant(''))();
   TextColumn get description => text().nullable()();
+  TextColumn get type => text().withDefault(const Constant('depot'))();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
